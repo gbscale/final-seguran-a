@@ -1,0 +1,34 @@
+
+# Variaveis de ambiente e credenciais
+.env
+.env.*
+!.env.example
+*.secret
+
+# Chaves privadas e certificados sensiveis
+*.key
+*.p12
+*.pfx
+id_rsa
+id_ed25519
+id_ecdsa
+*private*.asc
+*secret*.asc
+
+# Diretorio local de chaves GPG
+.gnupg/
+
+# Arquivos temporarios do sistema
+*.tmp
+*.swp
+*.bak
+Thumbs.db
+.DS_Store
+
+# Arquivos temporarios do Python
+__pycache__/
+*.pyc
+
+# Ambientes virtuais
+.venv/
+venv/
