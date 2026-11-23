@@ -1,9 +1,9 @@
 # Coletado em: 2026-11-23 16:02:32 -03
 # Estado ATUAL do SSH (somente leitura; hardening ainda NAO realizado)
 $ docker exec shozz-ubuntu-router ss -tlnp
-State  Recv-Q Send-Q Local Address:Port  Peer Address:PortProcess                     
+State  Recv-Q Send-Q Local Address:Port  Peer Address:PortProcess
 LISTEN 0      128          0.0.0.0:22         0.0.0.0:*    users:(("sshd",pid=1,fd=3))
-LISTEN 0      4096      127.0.0.11:35669      0.0.0.0:*                               
+LISTEN 0      4096      127.0.0.11:35669      0.0.0.0:*
 LISTEN 0      128             [::]:22            [::]:*    users:(("sshd",pid=1,fd=4))
 
 $ docker exec shozz-ubuntu-router sshd -T | grep -Ei "^(port|permitrootlogin|passwordauthentication|pubkeyauthentication|allowusers) "

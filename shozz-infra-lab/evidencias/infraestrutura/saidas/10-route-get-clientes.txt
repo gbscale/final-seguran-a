@@ -1,6 +1,6 @@
 # Coletado em: 2026-11-23 16:02:06 -03
 $ docker exec shozz-cliente-lan ip route get 10.20.20.10; docker exec shozz-cliente-wan ip route get 10.10.10.10
 
-10.20.20.10 via 10.10.10.1 dev eth0  src 10.10.10.10 
-10.10.10.10 via 10.20.20.1 dev eth0  src 10.20.20.10 
+10.20.20.10 via 10.10.10.1 dev eth0  src 10.10.10.10
+10.10.10.10 via 10.20.20.1 dev eth0  src 10.20.20.10
 # exit code: 0

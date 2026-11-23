@@ -5,9 +5,9 @@ $ docker exec shozz-cliente-lan ip addr
     link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
     inet 127.0.0.1/8 scope host lo
        valid_lft forever preferred_lft forever
-    inet6 ::1/128 scope host 
+    inet6 ::1/128 scope host
        valid_lft forever preferred_lft forever
-2: eth0@if16: <BROADCAST,MULTICAST,UP,LOWER_UP,M-DOWN> mtu 1500 qdisc noqueue state UP 
+2: eth0@if16: <BROADCAST,MULTICAST,UP,LOWER_UP,M-DOWN> mtu 1500 qdisc noqueue state UP
     link/ether 2a:73:67:39:eb:1e brd ff:ff:ff:ff:ff:ff
     inet 10.10.10.10/24 brd 10.10.10.255 scope global eth0
        valid_lft forever preferred_lft forever
