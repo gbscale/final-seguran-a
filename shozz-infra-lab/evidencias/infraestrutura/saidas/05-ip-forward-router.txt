@@ -1,0 +1,7 @@
+# Coletado em: 2026-11-23 16:01:41 -03
+$ docker exec shozz-ubuntu-router cat /proc/sys/net/ipv4/ip_forward; docker exec shozz-ubuntu-router sh -c 'command -v sysctl >/dev/null && sysctl net.ipv4.ip_forward || echo sysctl nao disponivel'
+
+1
+net.ipv4.ip_forward = 1
+
+# exit code: 0

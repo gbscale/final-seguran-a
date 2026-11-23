@@ -1,0 +1,11 @@
+# Coletado em: 2026-11-23 16:02:23 -03
+# Contador Ip:ForwDatagrams do roteador (/proc/net/snmp) antes e depois de ping -c 10 LAN->WAN
+ForwDatagrams antes : 44
+$ docker exec shozz-cliente-lan ping -c 10 -q 10.20.20.10
+PING 10.20.20.10 (10.20.20.10): 56 data bytes
+
+--- 10.20.20.10 ping statistics ---
+10 packets transmitted, 10 packets received, 0% packet loss
+round-trip min/avg/max = 0.225/0.521/1.086 ms
+ForwDatagrams depois: 64
+Diferenca: 20  (esperado >= 20: 10 echo-request + 10 echo-reply encaminhados)

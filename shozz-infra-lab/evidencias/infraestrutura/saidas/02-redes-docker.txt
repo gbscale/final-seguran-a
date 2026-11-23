@@ -1,0 +1,18 @@
+# Coletado em: 2026-11-23 16:01:38 -03
+$ docker network ls --filter name=shozz; for n in shozz_lan shozz_wan; do echo; echo "== $n"; docker network inspect $n --format 'Driver={{.Driver}} Subnet={{(index .IPAM.Config 0).Subnet}} Gateway={{(index .IPAM.Config 0).Gateway}}{{range .Containers}}{{println}}  {{.Name}} {{.IPv4Address}} {{.MacAddress}}{{end}}'; done
+
+NETWORK ID     NAME        DRIVER    SCOPE
+cde4d7828195   shozz_lan   bridge    local
+93b010089ae5   shozz_wan   bridge    local
+
+== shozz_lan
+Driver=bridge Subnet=10.10.10.0/24 Gateway=10.10.10.254
+  shozz-cliente-lan 10.10.10.10/24 2a:73:67:39:eb:1e
+  shozz-ubuntu-router 10.10.10.1/24 6e:8c:3f:80:24:8d
+
+== shozz_wan
+Driver=bridge Subnet=10.20.20.0/24 Gateway=10.20.20.254
+  shozz-cliente-wan 10.20.20.10/24 8e:bf:04:cb:c7:ef
+  shozz-ubuntu-router 10.20.20.1/24 82:16:c3:56:43:7b
+
+# exit code: 0

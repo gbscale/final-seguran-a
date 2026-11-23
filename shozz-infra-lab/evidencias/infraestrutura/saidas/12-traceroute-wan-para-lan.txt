@@ -1,0 +1,7 @@
+# Coletado em: 2026-11-23 16:02:07 -03
+$ docker exec shozz-cliente-wan traceroute -n -m 5 -w 2 10.10.10.10
+
+traceroute to 10.10.10.10 (10.10.10.10), 5 hops max, 46 byte packets
+ 1  10.20.20.1  0.018 ms  0.012 ms  0.017 ms
+ 2  10.10.10.10  0.011 ms  0.015 ms  0.012 ms
+# exit code: 0

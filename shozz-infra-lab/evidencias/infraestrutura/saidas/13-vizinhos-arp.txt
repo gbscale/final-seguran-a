@@ -1,0 +1,11 @@
+# Coletado em: 2026-11-23 16:02:07 -03
+$ echo '## cliente-lan'; docker exec shozz-cliente-lan ip neigh; echo '## cliente-wan'; docker exec shozz-cliente-wan ip neigh; echo '## ubuntu-router'; docker exec shozz-ubuntu-router ip neigh
+
+## cliente-lan
+10.10.10.1 dev eth0 lladdr 6e:8c:3f:80:24:8d ref 1 used 0/0/0 probes 1 REACHABLE
+## cliente-wan
+10.20.20.1 dev eth0 lladdr 82:16:c3:56:43:7b ref 1 used 0/0/0 probes 1 REACHABLE
+## ubuntu-router
+10.20.20.10 dev eth0 lladdr 8e:bf:04:cb:c7:ef REACHABLE
+10.10.10.10 dev eth1 lladdr 2a:73:67:39:eb:1e REACHABLE
+# exit code: 0

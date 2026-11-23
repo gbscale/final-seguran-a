@@ -1,0 +1,8 @@
+# Coletado em: 2026-11-23 16:01:39 -03
+$ docker exec shozz-ubuntu-router ip route
+
+default via 10.10.10.254 dev eth1
+10.10.10.0/24 dev eth1 proto kernel scope link src 10.10.10.1
+10.20.20.0/24 dev eth0 proto kernel scope link src 10.20.20.1
+
+# exit code: 0
