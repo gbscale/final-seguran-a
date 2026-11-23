@@ -1,0 +1,8 @@
+# Coletado em: 2026-11-23 16:01:37 -03
+$ docker version --format 'Client {{.Client.Version}} / Server {{.Server.Version}}'; docker compose version; uname -r
+
+Client 29.10.0 / Server 29.10.0
+Docker Compose version v5.8.0
+7.0.0-43-generic
+
+# exit code: 0

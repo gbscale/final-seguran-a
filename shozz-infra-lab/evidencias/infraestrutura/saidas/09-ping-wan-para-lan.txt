@@ -1,0 +1,13 @@
+# Coletado em: 2026-11-23 16:02:03 -03
+$ docker exec shozz-cliente-wan ping -c 4 10.10.10.10
+
+PING 10.10.10.10 (10.10.10.10): 56 data bytes
+64 bytes from 10.10.10.10: seq=0 ttl=63 time=0.673 ms
+64 bytes from 10.10.10.10: seq=1 ttl=63 time=0.368 ms
+64 bytes from 10.10.10.10: seq=2 ttl=63 time=0.586 ms
+64 bytes from 10.10.10.10: seq=3 ttl=63 time=0.421 ms
+
+--- 10.10.10.10 ping statistics ---
+4 packets transmitted, 4 packets received, 0% packet loss
+round-trip min/avg/max = 0.368/0.512/0.673 ms
+# exit code: 0

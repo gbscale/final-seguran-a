@@ -1,0 +1,14 @@
+# Coletado em: 2026-11-23 16:01:37 -03
+$ docker compose -p shozz-infra-lab ps; echo; docker ps --filter name=shozz --format 'table {{.Names}}\t{{.Image}}\t{{.Status}}\t{{.Ports}}'
+
+NAME                  IMAGE                           COMMAND                  SERVICE         CREATED          STATUS          PORTS
+shozz-cliente-lan     alpine:3.22                     "sh -c 'ip route rep…"   cliente-lan     15 minutes ago   Up 15 minutes   
+shozz-cliente-wan     alpine:3.22                     "sh -c 'ip route rep…"   cliente-wan     15 minutes ago   Up 15 minutes   
+shozz-ubuntu-router   shozz-infra-lab-ubuntu-router   "/usr/sbin/sshd -D -e"   ubuntu-router   15 minutes ago   Up 15 minutes   2222/tcp
+
+NAMES                 IMAGE                           STATUS          PORTS
+shozz-cliente-wan     alpine:3.22                     Up 15 minutes   
+shozz-ubuntu-router   shozz-infra-lab-ubuntu-router   Up 15 minutes   2222/tcp
+shozz-cliente-lan     alpine:3.22                     Up 15 minutes   
+
+# exit code: 0

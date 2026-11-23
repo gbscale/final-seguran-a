@@ -1,0 +1,8 @@
+# Coletado em: 2026-11-23 16:01:40 -03
+$ docker exec shozz-cliente-wan ip route
+
+default via 10.20.20.254 dev eth0 
+10.10.10.0/24 via 10.20.20.1 dev eth0 
+10.20.20.0/24 dev eth0 scope link  src 10.20.20.10 
+
+# exit code: 0

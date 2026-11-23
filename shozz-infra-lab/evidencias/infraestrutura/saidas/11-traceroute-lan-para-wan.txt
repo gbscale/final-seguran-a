@@ -1,0 +1,7 @@
+# Coletado em: 2026-11-23 16:02:07 -03
+$ docker exec shozz-cliente-lan traceroute -n -m 5 -w 2 10.20.20.10
+
+traceroute to 10.20.20.10 (10.20.20.10), 5 hops max, 46 byte packets
+ 1  10.10.10.1  0.020 ms  0.030 ms  0.011 ms
+ 2  10.20.20.10  0.010 ms  0.021 ms  0.013 ms
+# exit code: 0

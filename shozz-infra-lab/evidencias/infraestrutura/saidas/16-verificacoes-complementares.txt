@@ -1,0 +1,30 @@
+# Coletado em: 2026-11-23 16:13:36 -03
+# Verificacoes complementares (revisao final). Somente leitura; nenhuma configuracao alterada.
+
+$ cat /proc/sys/net/ipv4/ip_forward   # host
+1
+
+$ docker exec shozz-ubuntu-router cat /proc/sys/net/ipv4/ip_forward
+1
+
+$ docker exec shozz-cliente-lan cat /proc/sys/net/ipv4/ip_forward
+1
+
+$ docker exec shozz-cliente-wan cat /proc/sys/net/ipv4/ip_forward
+1
+
+$ docker network inspect shozz_lan shozz_wan --format "{{.Name}} internal={{.Internal}} options={{.Options}}"
+shozz_lan internal=false options=map[]
+shozz_wan internal=false options=map[]
+
+$ docker port shozz-ubuntu-router; docker port shozz-cliente-lan; docker port shozz-cliente-wan
+(vazio = nenhuma porta publicada no host)
+
+$ docker compose config --quiet   # apos adicionar "name: shozz-infra-lab"
+# exit code: 0
+
+$ docker compose ps   # sem -p, apos adicionar "name:"
+NAME                  SERVICE         STATUS
+shozz-cliente-lan     cliente-lan     Up 27 minutes
+shozz-cliente-wan     cliente-wan     Up 27 minutes
+shozz-ubuntu-router   ubuntu-router   Up 27 minutes
