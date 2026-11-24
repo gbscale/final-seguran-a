@@ -1,0 +1,239 @@
+Data e hora (America/Sao_Paulo): 2026-11-24 20:02:26 -03:00
+
+## Roteador original e imagem
+$ docker inspect --format '{{.Id}} {{.Image}} mounts={{len .Mounts}}' shozz-ubuntu-router
+f56d0eec87ee078ae4bc96ae6d3fdb84d51a52ed2cb43ca9ee126e52caf9d705 sha256:f38d2685666d9e1fba6383b9c169390843d8edc4318b3eaca9f6289d786e5932 mounts=0
+[exit=0, esperado=0]
+[validado: mounts=0$]
+
+## IDs dos clientes antes de atualizar o roteador
+$ docker inspect --format '{{.Name}} {{.Id}}' shozz-cliente-lan shozz-cliente-wan
+/shozz-cliente-lan 6dc706e6e2722fdb69463fdcd864d89f2c197d7a630b9efa2de79d2fbb6ac4b6
+/shozz-cliente-wan d1fbb7412e5010175d22782906a31e1652bcce0357146ec1b03c30baf7da0c02
+[exit=0, esperado=0]
+
+## Impressões do arquivo de chaves públicas e da configuração de hardening do roteador original
+$ docker compose exec -T ubuntu-router sha256sum /home/ubuntu/.ssh/authorized_keys /etc/ssh/sshd_config.d/10-shozz-hardening.conf
+756ba35199351f7b6309e7a66565f99f6b07a8af4990f38a88981f71893bdd96  /home/ubuntu/.ssh/authorized_keys
+8eade28ab7b5f647f1e24c6fbe1683101ff57a4b408ab1242071595ea3e044dd  /etc/ssh/sshd_config.d/10-shozz-hardening.conf
+[exit=0, esperado=0]
+
+## Build da imagem final do roteador
+$ docker compose build ubuntu-router
+ Image shozz-infra-lab-ubuntu-router Building
+#1 [internal] load local bake definitions
+#1 reading from stdin 817B 0.0s done
+#1 DONE 0.0s
+
+#2 [internal] load build definition from Dockerfile
+#2 transferring dockerfile: 1.95kB 0.0s done
+#2 DONE 0.0s
+
+#3 [context firewall_src] load .dockerignore
+#3 transferring firewall_src: 55B done
+#3 DONE 0.0s
+
+#4 [internal] load metadata for docker.io/library/ubuntu:24.04
+#4 DONE 2.5s
+
+#5 [internal] load .dockerignore
+#5 transferring context: 301B done
+#5 DONE 0.0s
+
+#6 [stage-0  1/10] FROM docker.io/library/ubuntu:24.04@sha256:562111b88caa79c71391c0c4d3c2114a7d5c35915c20561fd893cb1e07929e6b
+#6 resolve docker.io/library/ubuntu:24.04@sha256:562111b88caa79c71391c0c4d3c2114a7d5c35915c20561fd893cb1e07929e6b 0.0s done
+#6 DONE 0.0s
+
+#7 [internal] load build context
+#7 transferring context: 212B done
+#7 DONE 0.0s
+
+#8 [context firewall_src] load from client
+#8 transferring firewall_src: 33B done
+#8 DONE 0.0s
+
+#9 [stage-0  3/10] RUN apt-get update &&     apt-get install -y --no-install-recommends iptables &&     apt-get clean &&     rm -rf /var/lib/apt/lists/*
+#9 CACHED
+
+#10 [stage-0  5/10] COPY hardening/ssh/10-shozz-hardening.conf /etc/ssh/sshd_config.d/10-shozz-hardening.conf
+#10 CACHED
+
+#11 [stage-0  8/10] COPY --from=firewall_src --chmod=0755 firewall.sh /usr/local/sbin/shozz-firewall
+#11 CACHED
+
+#12 [stage-0  2/10] RUN apt-get update &&     apt-get upgrade -y &&     apt-get install -y --no-install-recommends     iproute2     iputils-ping     openssh-server     sudo     ca-certificates &&     apt-get clean &&     rm -rf /var/lib/apt/lists/*
+#12 CACHED
+
+#13 [stage-0  6/10] COPY hardening/ssh/authorized_keys /home/ubuntu/.ssh/authorized_keys
+#13 CACHED
+
+#14 [stage-0  7/10] COPY hardening/entrypoint.sh /usr/local/sbin/shozz-entrypoint.sh
+#14 CACHED
+
+#15 [stage-0  4/10] RUN rm -f /etc/ssh/ssh_host_* &&     mkdir -p /run/sshd
+#15 CACHED
+
+#16 [stage-0  9/10] RUN sed -i 's/\r$//' /usr/local/sbin/shozz-entrypoint.sh /usr/local/sbin/shozz-firewall
+#16 CACHED
+
+#17 [stage-0 10/10] RUN chown root:root /etc/ssh/sshd_config /etc/ssh/sshd_config.d/10-shozz-hardening.conf &&     chmod 600 /etc/ssh/sshd_config /etc/ssh/sshd_config.d/10-shozz-hardening.conf &&     chown -R ubuntu:ubuntu /home/ubuntu/.ssh &&     chmod 700 /home/ubuntu/.ssh &&     chmod 600 /home/ubuntu/.ssh/authorized_keys &&     chown root:root /usr/local/sbin/shozz-entrypoint.sh &&     chmod 755 /usr/local/sbin/shozz-entrypoint.sh
+#17 CACHED
+
+#18 exporting to image
+#18 exporting layers done
+#18 exporting manifest sha256:c18188c6d69a24fe7788d3b1a3b98a0c61e73d60ce6abb22107360fd1c5bb0ce done
+#18 exporting config sha256:4dda6718478a1f1b7050f247278539083b1002d3621ad63ce62e6e6613a93ab2 done
+#18 exporting attestation manifest sha256:55d7cd02fd5f31b306f42fed46dd40e79024413c7e9211a3406ed0e67dc864e4 0.1s done
+#18 exporting manifest list sha256:133a8bddd2b232e7708a46ea3e205c14320747d248662aefab99b21f1b943a20
+#18 exporting manifest list sha256:133a8bddd2b232e7708a46ea3e205c14320747d248662aefab99b21f1b943a20 0.0s done
+#18 naming to docker.io/library/shozz-infra-lab-ubuntu-router:latest done
+#18 unpacking to docker.io/library/shozz-infra-lab-ubuntu-router:latest 0.0s done
+#18 DONE 0.2s
+
+#19 resolving provenance for metadata file
+#19 DONE 0.0s
+ Image shozz-infra-lab-ubuntu-router Built
+[exit=0, esperado=0]
+
+## Teste isolado sem rede externa, com aplicação e restauração antes da recriação
+$ docker run --rm --pull never --network none --cap-add NET_ADMIN --hostname ubuntu-router --entrypoint /bin/bash shozz-infra-lab-ubuntu-router -ec 'ip link add sho-lan type veth peer name sho-wan; ip addr add 10.10.10.1/24 dev sho-lan; ip addr add 10.20.20.1/24 dev sho-wan; ip link set sho-lan up; ip link set sho-wan up; shozz-firewall apply; iptables -S; shozz-firewall restore; iptables -S'
+shozz-firewall: ativo (LAN=sho-lan, WAN=sho-wan). Backup: /run/shozz-firewall/filter-before.rules
+-P INPUT DROP
+-P FORWARD DROP
+-P OUTPUT ACCEPT
+-N SHOZZ_FORWARD_DENY
+-N SHOZZ_INPUT_DENY
+-N SHOZZ_SSH
+-N SHOZZ_SSH_RATE
+-A INPUT -i lo -j ACCEPT
+-A INPUT -m conntrack --ctstate INVALID -j DROP
+-A INPUT ! -s 10.10.10.0/24 -i sho-lan -j SHOZZ_INPUT_DENY
+-A INPUT ! -s 10.20.20.0/24 -i sho-wan -j SHOZZ_INPUT_DENY
+-A INPUT -p tcp -m tcp --dport 2222 -j SHOZZ_SSH
+-A INPUT -s 10.10.10.10/32 -d 10.10.10.1/32 -i sho-lan -p icmp -m icmp --icmp-type 8 -m hashlimit --hashlimit-upto 3/sec --hashlimit-burst 5 --hashlimit-mode srcip --hashlimit-name shozz_icmp_in -j ACCEPT
+-A INPUT -p icmp -m icmp --icmp-type 8 -j SHOZZ_INPUT_DENY
+-A INPUT -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
+-A INPUT -j SHOZZ_INPUT_DENY
+-A FORWARD -m conntrack --ctstate INVALID -j DROP
+-A FORWARD ! -s 10.10.10.0/24 -i sho-lan -j SHOZZ_FORWARD_DENY
+-A FORWARD ! -s 10.20.20.0/24 -i sho-wan -j SHOZZ_FORWARD_DENY
+-A FORWARD -s 10.10.10.10/32 -d 10.20.20.10/32 -i sho-lan -o sho-wan -p icmp -m icmp --icmp-type 8 -m hashlimit --hashlimit-upto 3/sec --hashlimit-burst 5 --hashlimit-mode srcip --hashlimit-name shozz_icmp_fwd -j ACCEPT
+-A FORWARD -p icmp -m icmp --icmp-type 8 -j SHOZZ_FORWARD_DENY
+-A FORWARD -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
+-A FORWARD -j SHOZZ_FORWARD_DENY
+-A SHOZZ_FORWARD_DENY -m limit --limit 4/min --limit-burst 4 -j LOG --log-prefix "shozz forward drop " --log-level 6
+-A SHOZZ_FORWARD_DENY -j DROP
+-A SHOZZ_INPUT_DENY -m limit --limit 4/min --limit-burst 4 -j LOG --log-prefix "shozz input drop " --log-level 6
+-A SHOZZ_INPUT_DENY -j DROP
+-A SHOZZ_SSH ! -i sho-lan -j SHOZZ_INPUT_DENY
+-A SHOZZ_SSH ! -d 10.10.10.1/32 -j SHOZZ_INPUT_DENY
+-A SHOZZ_SSH -s 10.10.10.10/32 -m conntrack --ctstate ESTABLISHED -j ACCEPT
+-A SHOZZ_SSH -s 10.10.10.254/32 -m conntrack --ctstate ESTABLISHED -j ACCEPT
+-A SHOZZ_SSH -s 10.10.10.10/32 -p tcp -m tcp --tcp-flags FIN,SYN,RST,ACK SYN -m conntrack --ctstate NEW -j SHOZZ_SSH_RATE
+-A SHOZZ_SSH -s 10.10.10.254/32 -p tcp -m tcp --tcp-flags FIN,SYN,RST,ACK SYN -m conntrack --ctstate NEW -j SHOZZ_SSH_RATE
+-A SHOZZ_SSH -j SHOZZ_INPUT_DENY
+-A SHOZZ_SSH_RATE -m hashlimit --hashlimit-upto 12/min --hashlimit-burst 4 --hashlimit-mode srcip --hashlimit-name shozz_ssh_new -j ACCEPT
+-A SHOZZ_SSH_RATE -m limit --limit 4/min --limit-burst 4 -j LOG --log-prefix "shozz ssh rate " --log-level 6
+-A SHOZZ_SSH_RATE -j DROP
+shozz-firewall: tabela filter original restaurada.
+-P INPUT ACCEPT
+-P FORWARD ACCEPT
+-P OUTPUT ACCEPT
+[exit=0, esperado=0]
+[validado: (?m)^-P INPUT DROP\s*$]
+[validado: (?m)^-P FORWARD DROP\s*$]
+[validado: (?m)^-P INPUT ACCEPT\s*$]
+[validado: (?m)^-P FORWARD ACCEPT\s*$]
+
+## Recriação apenas do serviço ubuntu-router com firewall padrão on
+$ docker compose up -d --no-deps --no-build ubuntu-router
+ Container shozz-ubuntu-router Recreate
+ Container shozz-ubuntu-router Recreated
+ Container shozz-ubuntu-router Starting
+ Container shozz-ubuntu-router Started
+[exit=0, esperado=0]
+
+## Roteador atual, imagem e estado
+$ docker inspect --format '{{.Id}} {{.Image}} running={{.State.Running}} cap={{json .HostConfig.CapAdd}}' shozz-ubuntu-router
+45fc6757f4f007497f6a4919379a48f917437ada5df385c3b7b4027fdaa60c6d sha256:133a8bddd2b232e7708a46ea3e205c14320747d248662aefab99b21f1b943a20 running=true cap=["CAP_NET_ADMIN"]
+[exit=0, esperado=0]
+
+## IDs dos clientes depois de atualizar o roteador
+$ docker inspect --format '{{.Name}} {{.Id}}' shozz-cliente-lan shozz-cliente-wan
+/shozz-cliente-lan 6dc706e6e2722fdb69463fdcd864d89f2c197d7a630b9efa2de79d2fbb6ac4b6
+/shozz-cliente-wan d1fbb7412e5010175d22782906a31e1652bcce0357146ec1b03c30baf7da0c02
+[exit=0, esperado=0]
+[validado: roteador recriado e clientes com os mesmos IDs]
+
+## Estado dos três serviços
+$ docker compose ps --all
+NAME                  IMAGE                           COMMAND                  SERVICE         CREATED          STATUS          PORTS
+shozz-cliente-lan     alpine:3.22                     "sh -c 'ip route rep…"   cliente-lan     15 minutes ago   Up 15 minutes
+shozz-cliente-wan     alpine:3.22                     "sh -c 'ip route rep…"   cliente-wan     15 minutes ago   Up 15 minutes
+shozz-ubuntu-router   shozz-infra-lab-ubuntu-router   "/usr/local/sbin/sho…"   ubuntu-router   5 seconds ago    Up 3 seconds    2222/tcp
+[exit=0, esperado=0]
+
+## Aplicação automática e escuta SSH no novo contêiner
+$ docker compose logs --no-color --tail 20 ubuntu-router
+shozz-ubuntu-router  | shozz-firewall: ativo (LAN=eth0, WAN=eth1). Backup: /run/shozz-firewall/filter-before.rules
+shozz-ubuntu-router  | ssh-keygen: generating new host keys: RSA ECDSA ED25519
+shozz-ubuntu-router  | Server listening on 0.0.0.0 port 2222.
+[exit=0, esperado=0]
+[validado: running=true]
+[validado: shozz-firewall: ativo]
+[validado: Server listening on 0\.0\.0\.0 port 2222]
+
+## Arquivos de configuração SSH após a recriação
+$ docker compose exec -T ubuntu-router sha256sum /home/ubuntu/.ssh/authorized_keys /etc/ssh/sshd_config.d/10-shozz-hardening.conf
+756ba35199351f7b6309e7a66565f99f6b07a8af4990f38a88981f71893bdd96  /home/ubuntu/.ssh/authorized_keys
+8eade28ab7b5f647f1e24c6fbe1683101ff57a4b408ab1242071595ea3e044dd  /etc/ssh/sshd_config.d/10-shozz-hardening.conf
+[exit=0, esperado=0]
+[validado: arquivos de configuração SSH preservados byte a byte]
+
+## Backend do iptables
+$ docker compose exec -T ubuntu-router iptables --version
+iptables v1.8.10 (nf_tables)
+[exit=0, esperado=0]
+
+## Políticas no novo roteador
+$ docker compose exec -T ubuntu-router iptables -S
+-P INPUT DROP
+-P FORWARD DROP
+-P OUTPUT ACCEPT
+-N SHOZZ_FORWARD_DENY
+-N SHOZZ_INPUT_DENY
+-N SHOZZ_SSH
+-N SHOZZ_SSH_RATE
+-A INPUT -i lo -j ACCEPT
+-A INPUT -m conntrack --ctstate INVALID -j DROP
+-A INPUT ! -s 10.10.10.0/24 -i eth0 -j SHOZZ_INPUT_DENY
+-A INPUT ! -s 10.20.20.0/24 -i eth1 -j SHOZZ_INPUT_DENY
+-A INPUT -p tcp -m tcp --dport 2222 -j SHOZZ_SSH
+-A INPUT -s 10.10.10.10/32 -d 10.10.10.1/32 -i eth0 -p icmp -m icmp --icmp-type 8 -m hashlimit --hashlimit-upto 3/sec --hashlimit-burst 5 --hashlimit-mode srcip --hashlimit-name shozz_icmp_in -j ACCEPT
+-A INPUT -p icmp -m icmp --icmp-type 8 -j SHOZZ_INPUT_DENY
+-A INPUT -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
+-A INPUT -j SHOZZ_INPUT_DENY
+-A FORWARD -m conntrack --ctstate INVALID -j DROP
+-A FORWARD ! -s 10.10.10.0/24 -i eth0 -j SHOZZ_FORWARD_DENY
+-A FORWARD ! -s 10.20.20.0/24 -i eth1 -j SHOZZ_FORWARD_DENY
+-A FORWARD -s 10.10.10.10/32 -d 10.20.20.10/32 -i eth0 -o eth1 -p icmp -m icmp --icmp-type 8 -m hashlimit --hashlimit-upto 3/sec --hashlimit-burst 5 --hashlimit-mode srcip --hashlimit-name shozz_icmp_fwd -j ACCEPT
+-A FORWARD -p icmp -m icmp --icmp-type 8 -j SHOZZ_FORWARD_DENY
+-A FORWARD -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
+-A FORWARD -j SHOZZ_FORWARD_DENY
+-A SHOZZ_FORWARD_DENY -m limit --limit 4/min --limit-burst 4 -j LOG --log-prefix "shozz forward drop " --log-level 6
+-A SHOZZ_FORWARD_DENY -j DROP
+-A SHOZZ_INPUT_DENY -m limit --limit 4/min --limit-burst 4 -j LOG --log-prefix "shozz input drop " --log-level 6
+-A SHOZZ_INPUT_DENY -j DROP
+-A SHOZZ_SSH ! -i eth0 -j SHOZZ_INPUT_DENY
+-A SHOZZ_SSH ! -d 10.10.10.1/32 -j SHOZZ_INPUT_DENY
+-A SHOZZ_SSH -s 10.10.10.10/32 -m conntrack --ctstate ESTABLISHED -j ACCEPT
+-A SHOZZ_SSH -s 10.10.10.254/32 -m conntrack --ctstate ESTABLISHED -j ACCEPT
+-A SHOZZ_SSH -s 10.10.10.10/32 -p tcp -m tcp --tcp-flags FIN,SYN,RST,ACK SYN -m conntrack --ctstate NEW -j SHOZZ_SSH_RATE
+-A SHOZZ_SSH -s 10.10.10.254/32 -p tcp -m tcp --tcp-flags FIN,SYN,RST,ACK SYN -m conntrack --ctstate NEW -j SHOZZ_SSH_RATE
+-A SHOZZ_SSH -j SHOZZ_INPUT_DENY
+-A SHOZZ_SSH_RATE -m hashlimit --hashlimit-upto 12/min --hashlimit-burst 4 --hashlimit-mode srcip --hashlimit-name shozz_ssh_new -j ACCEPT
+-A SHOZZ_SSH_RATE -m limit --limit 4/min --limit-burst 4 -j LOG --log-prefix "shozz ssh rate " --log-level 6
+-A SHOZZ_SSH_RATE -j DROP
+[exit=0, esperado=0]
+[validado: (?m)^-P INPUT DROP\s*$]
+[validado: (?m)^-P FORWARD DROP\s*$]
