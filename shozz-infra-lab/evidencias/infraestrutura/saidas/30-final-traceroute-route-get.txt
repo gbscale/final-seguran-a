@@ -1,0 +1,15 @@
+# Coletado em: 2026-11-24 00:08:28 -03
+# Estado final: decisao de rota e traceroute nos dois sentidos
+$ docker exec shozz-cliente-lan ip route get 10.20.20.10; docker exec shozz-cliente-wan ip route get 10.10.10.10; echo; docker exec shozz-cliente-lan traceroute -n -m 5 -w 2 10.20.20.10; echo; docker exec shozz-cliente-wan traceroute -n -m 5 -w 2 10.10.10.10
+
+10.20.20.10 via 10.10.10.1 dev eth0  src 10.10.10.10
+10.10.10.10 via 10.20.20.1 dev eth0  src 10.20.20.10
+
+traceroute to 10.20.20.10 (10.20.20.10), 5 hops max, 46 byte packets
+ 1  10.10.10.1  0.022 ms  0.011 ms  0.009 ms
+ 2  10.20.20.10  0.008 ms  0.009 ms  0.017 ms
+
+traceroute to 10.10.10.10 (10.10.10.10), 5 hops max, 46 byte packets
+ 1  10.20.20.1  0.013 ms  0.004 ms  0.004 ms
+ 2  10.10.10.10  0.004 ms  0.004 ms  0.021 ms
+# exit code: 0

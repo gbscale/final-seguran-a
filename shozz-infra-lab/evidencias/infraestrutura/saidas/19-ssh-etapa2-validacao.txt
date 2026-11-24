@@ -1,0 +1,33 @@
+# Coletado em: 2026-11-23 23:58:27 -03
+# Etapa 2 (apos validar a chave): configuracao final aplicada, validada com sshd -t e recarregada (SIGHUP) apenas na instancia de teste
+$ docker exec shozz-ubuntu-router sshd -t && echo 'sshd -t: OK (sem erros)' && docker exec shozz-ubuntu-router sh -c 'kill -HUP $(cat /run/sshd-teste-2222.pid)' && echo 'SIGHUP enviado a instancia de teste'; docker exec shozz-ubuntu-router sh -c 'sshd -T | grep -Ei "^(port|addressfamily|listenaddress|permitrootlogin|allowusers|pubkeyauthentication|authenticationmethods|passwordauthentication|kbdinteractiveauthentication|permitemptypasswords|maxauthtries|maxsessions|logingracetime|clientaliveinterval|clientalivecountmax|x11forwarding|allowtcpforwarding|allowagentforwarding|permittunnel|permituserenvironment|debianbanner|loglevel|usepam|kexalgorithms|ciphers|macs) " | sort'
+
+sshd -t: OK (sem erros)
+SIGHUP enviado a instancia de teste
+addressfamily inet
+allowagentforwarding no
+allowtcpforwarding no
+allowusers ubuntu
+authenticationmethods publickey
+ciphers chacha20-poly1305@openssh.com,aes256-gcm@openssh.com,aes128-gcm@openssh.com,aes256-ctr,aes192-ctr,aes128-ctr
+clientalivecountmax 2
+clientaliveinterval 300
+debianbanner no
+kbdinteractiveauthentication no
+kexalgorithms sntrup761x25519-sha512@openssh.com,curve25519-sha256,curve25519-sha256@libssh.org
+listenaddress 0.0.0.0:2222
+logingracetime 30
+loglevel VERBOSE
+macs hmac-sha2-512-etm@openssh.com,hmac-sha2-256-etm@openssh.com,umac-128-etm@openssh.com
+maxauthtries 3
+maxsessions 2
+passwordauthentication no
+permitemptypasswords no
+permitrootlogin no
+permittunnel no
+permituserenvironment no
+port 2222
+pubkeyauthentication yes
+usepam yes
+x11forwarding no
+# exit code: 0

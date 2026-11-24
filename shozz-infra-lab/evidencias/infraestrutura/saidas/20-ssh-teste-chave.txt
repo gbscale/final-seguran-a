@@ -1,0 +1,21 @@
+# Coletado em: 2026-11-23 23:58:42 -03
+# T-SSH1: login do usuario ubuntu por chave (porta 2222), pela LAN (10.10.10.1) e pela WAN (10.20.20.1)
+$ for ip in 10.10.10.1 10.20.20.1; do echo "## ubuntu@$ip:2222"; ssh -i /home/gabriel/.ssh/shozz_lab_ed25519 -o IdentitiesOnly=yes -o UserKnownHostsFile=/tmp/claude-1000/-home-gabriel-Rotier/016038b1-2fe6-4b7c-b7f0-36823ef92060/scratchpad/known_hosts_lab -o StrictHostKeyChecking=accept-new -o BatchMode=yes -o ConnectTimeout=5 -p 2222 -v ubuntu@$ip 'echo LOGIN_OK; hostname' 2>&1 | grep -E 'Authenticated|Authentications that can continue|LOGIN_OK|uid=|Permission denied|Remote protocol version|^ubuntu-router'; echo; done
+
+## ubuntu@10.10.10.1:2222
+debug1: Remote protocol version 2.0, remote software version OpenSSH_9.6p1
+debug1: Authentications that can continue: publickey
+Authenticated to 10.10.10.1 ([10.10.10.1]:2222) using "publickey".
+debug1: Sending command: echo LOGIN_OK; hostname
+LOGIN_OK
+ubuntu-router
+
+## ubuntu@10.20.20.1:2222
+debug1: Remote protocol version 2.0, remote software version OpenSSH_9.6p1
+debug1: Authentications that can continue: publickey
+Authenticated to 10.20.20.1 ([10.20.20.1]:2222) using "publickey".
+debug1: Sending command: echo LOGIN_OK; hostname
+LOGIN_OK
+ubuntu-router
+
+# exit code: 0

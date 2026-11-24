@@ -3,8 +3,8 @@ name: shozz-infra-lab
 services:
   ubuntu-router:
     build:
-      context: .
-      dockerfile: Dockerfile
+      context: ..
+      dockerfile: infraestrutura/Dockerfile
     container_name: shozz-ubuntu-router
     hostname: ubuntu-router
     cap_add:

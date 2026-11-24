@@ -1,0 +1,25 @@
+# Coletado em: 2026-11-23 23:57:57 -03
+# Etapa 1 (senha ainda habilitada): validacao de sintaxe e configuracao efetiva antes de iniciar a instancia de teste na porta 2222
+$ docker exec shozz-ubuntu-router sshd -t && echo 'sshd -t: OK (sem erros)'; docker exec shozz-ubuntu-router sh -c 'sshd -T | grep -Ei "^(port|addressfamily|permitrootlogin|allowusers|pubkeyauthentication|passwordauthentication|kbdinteractiveauthentication|authenticationmethods) "'; docker exec shozz-ubuntu-router ls -la /home/ubuntu/.ssh /etc/ssh/sshd_config.d
+
+sshd -t: OK (sem erros)
+port 2222
+addressfamily inet
+permitrootlogin no
+pubkeyauthentication yes
+passwordauthentication yes
+kbdinteractiveauthentication no
+allowusers ubuntu
+authenticationmethods any
+/etc/ssh/sshd_config.d:
+total 16
+drwxr-xr-x 1 root root 4096 Nov 24 02:57 .
+drwxr-xr-x 1 root root 4096 Nov 23 18:45 ..
+-rw------- 1 root root 2098 Nov 24 02:57 10-shozz-hardening.conf
+
+/home/ubuntu/.ssh:
+total 12
+drwx------ 2 ubuntu ubuntu 4096 Nov 24 02:57 .
+drwxr-x--- 1 ubuntu ubuntu 4096 Nov 24 02:57 ..
+-rw------- 1 ubuntu ubuntu   98 Nov 24 02:57 authorized_keys
+# exit code: 0

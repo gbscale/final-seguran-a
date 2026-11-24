@@ -1,0 +1,8 @@
+# Coletado em: 2026-11-24 00:09:00 -03
+# T-SSH5 final: alcance TCP da porta 2222 a partir dos clientes LAN e WAN (nc -z)
+$ docker exec shozz-cliente-lan nc -z -w 3 10.10.10.1 2222 && echo 'cliente-lan -> 10.10.10.1:2222 ABERTA'; docker exec shozz-cliente-wan nc -z -w 3 10.20.20.1 2222 && echo 'cliente-wan -> 10.20.20.1:2222 ABERTA'; docker exec shozz-cliente-lan nc -z -w 3 10.20.20.1 2222 && echo 'cliente-lan -> 10.20.20.1:2222 (roteado) ABERTA'
+
+cliente-lan -> 10.10.10.1:2222 ABERTA
+cliente-wan -> 10.20.20.1:2222 ABERTA
+cliente-lan -> 10.20.20.1:2222 (roteado) ABERTA
+# exit code: 0

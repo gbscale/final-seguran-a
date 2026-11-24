@@ -1,0 +1,9 @@
+# Coletado em: 2026-11-23 23:58:43 -03
+# T-SSH3: tentativa de login como root com a chave do laboratorio
+$ ssh -i /home/gabriel/.ssh/shozz_lab_ed25519 -o IdentitiesOnly=yes -o UserKnownHostsFile=/tmp/claude-1000/-home-gabriel-Rotier/016038b1-2fe6-4b7c-b7f0-36823ef92060/scratchpad/known_hosts_lab -o StrictHostKeyChecking=accept-new -o BatchMode=yes -o ConnectTimeout=5 -p 2222 -v root@10.10.10.1 true 2>&1 | grep -E 'Authenticated|Authentications that can continue|LOGIN_OK|uid=|Permission denied|Remote protocol version|^ubuntu-router'
+
+debug1: Remote protocol version 2.0, remote software version OpenSSH_9.6p1
+debug1: Authentications that can continue: publickey
+debug1: Authentications that can continue: publickey
+root@10.10.10.1: Permission denied (publickey).
+# exit code: 0

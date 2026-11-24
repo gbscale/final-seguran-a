@@ -1,0 +1,50 @@
+# Coletado em: 2026-11-24 00:08:56 -03
+# Estado final do SSH: processo, chaves de host geradas na inicializacao, sshd -t, sshd -T (configuracao efetiva) e portas em escuta
+$ docker exec shozz-ubuntu-router ps -eo pid,user,args; echo; echo '## log de inicializacao (docker logs)'; docker logs shozz-ubuntu-router 2>&1 | head -5; echo; echo '## chaves de host (comentario mostra onde foram geradas)'; docker exec shozz-ubuntu-router sh -c 'for f in /etc/ssh/ssh_host_*_key.pub; do ssh-keygen -lf $f; done'; echo; docker exec shozz-ubuntu-router sshd -t && echo 'sshd -t: OK (sem erros)'; echo; docker exec shozz-ubuntu-router sh -c 'sshd -T | grep -Ei "^(port|addressfamily|listenaddress|permitrootlogin|allowusers|pubkeyauthentication|authenticationmethods|passwordauthentication|kbdinteractiveauthentication|permitemptypasswords|maxauthtries|maxsessions|logingracetime|clientaliveinterval|clientalivecountmax|x11forwarding|allowtcpforwarding|allowagentforwarding|permittunnel|permituserenvironment|debianbanner|loglevel|usepam|kexalgorithms|ciphers|macs) " | sort'; echo; docker exec shozz-ubuntu-router ss -tlnp
+
+    PID USER     COMMAND
+      1 root     sshd: /usr/sbin/sshd -D -e [listener] 0 of 10-100 startups
+     39 root     ps -eo pid,user,args
+
+## log de inicializacao (docker logs)
+ssh-keygen: generating new host keys: RSA ECDSA ED25519
+Server listening on 0.0.0.0 port 2222.
+
+## chaves de host (comentario mostra onde foram geradas)
+256 SHA256:isu/D9LTcsWDQ259MO5ncfMQ0b9kPa9x2rMD9XUfE7A root@ubuntu-router (ECDSA)
+256 SHA256:ZDxX9lRQcaxbtwu7ksoLBmydAOkSt7gr33XGUadjeQ0 root@ubuntu-router (ED25519)
+3072 SHA256:TvNXV4OSFiyYwiUkhKo+98ftj7pezq/95pAqZRnRB/4 root@ubuntu-router (RSA)
+
+sshd -t: OK (sem erros)
+
+addressfamily inet
+allowagentforwarding no
+allowtcpforwarding no
+allowusers ubuntu
+authenticationmethods publickey
+ciphers chacha20-poly1305@openssh.com,aes256-gcm@openssh.com,aes128-gcm@openssh.com,aes256-ctr,aes192-ctr,aes128-ctr
+clientalivecountmax 2
+clientaliveinterval 300
+debianbanner no
+kbdinteractiveauthentication no
+kexalgorithms sntrup761x25519-sha512@openssh.com,curve25519-sha256,curve25519-sha256@libssh.org
+listenaddress 0.0.0.0:2222
+logingracetime 30
+loglevel VERBOSE
+macs hmac-sha2-512-etm@openssh.com,hmac-sha2-256-etm@openssh.com,umac-128-etm@openssh.com
+maxauthtries 3
+maxsessions 2
+passwordauthentication no
+permitemptypasswords no
+permitrootlogin no
+permittunnel no
+permituserenvironment no
+port 2222
+pubkeyauthentication yes
+usepam yes
+x11forwarding no
+
+State  Recv-Q Send-Q Local Address:Port  Peer Address:PortProcess
+LISTEN 0      128          0.0.0.0:2222       0.0.0.0:*    users:(("sshd",pid=1,fd=3))
+LISTEN 0      4096      127.0.0.11:35409      0.0.0.0:*
+# exit code: 0

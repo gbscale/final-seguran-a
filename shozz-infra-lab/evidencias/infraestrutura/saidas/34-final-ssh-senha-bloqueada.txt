@@ -1,0 +1,9 @@
+# Coletado em: 2026-11-24 00:08:59 -03
+# T-SSH2 final: tentativa SOMENTE por senha/keyboard-interactive (sem chave). Nenhuma senha e enviada; verifica-se que o servidor nao oferece esses metodos.
+$ ssh -o PubkeyAuthentication=no -o PreferredAuthentications=password,keyboard-interactive -o UserKnownHostsFile=/tmp/claude-1000/-home-gabriel-Rotier/016038b1-2fe6-4b7c-b7f0-36823ef92060/scratchpad/known_hosts_lab -o BatchMode=yes -o ConnectTimeout=5 -p 2222 -v ubuntu@10.10.10.1 true 2>&1 | grep -E 'Server host key|Authenticated|Authentications that can continue|LOGIN_OK|uid=|Permission denied|Remote protocol version|^ubuntu-router|Connection refused|sudo'
+
+debug1: Remote protocol version 2.0, remote software version OpenSSH_9.6p1
+debug1: Server host key: ssh-ed25519 SHA256:ZDxX9lRQcaxbtwu7ksoLBmydAOkSt7gr33XGUadjeQ0
+debug1: Authentications that can continue: publickey
+ubuntu@10.10.10.1: Permission denied (publickey).
+# exit code: 0

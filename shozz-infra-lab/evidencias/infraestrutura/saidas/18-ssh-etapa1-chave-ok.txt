@@ -1,0 +1,23 @@
+# Coletado em: 2026-11-23 23:58:12 -03
+# Etapa 1: autenticacao por CHAVE na porta 2222 (senha ainda habilitada). Impressao digital da chave de host conferida via docker exec.
+$ echo '## Chave de host ED25519 (canal confiavel: docker exec)'; docker exec shozz-ubuntu-router ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub; echo; echo '## Instancias sshd e portas'; docker exec shozz-ubuntu-router ss -tlnp; echo; echo '## Conexao do host (10.10.10.254) para ubuntu@10.10.10.1:2222 com a chave do laboratorio'; ssh -i /home/gabriel/.ssh/shozz_lab_ed25519 -o IdentitiesOnly=yes -o UserKnownHostsFile=/tmp/claude-1000/-home-gabriel-Rotier/016038b1-2fe6-4b7c-b7f0-36823ef92060/scratchpad/known_hosts_lab -o StrictHostKeyChecking=accept-new -o BatchMode=yes -o ConnectTimeout=5 -p 2222 -o FingerprintHash=sha256 -v ubuntu@10.10.10.1 'echo LOGIN_OK; id; hostname' 2>&1 | grep -E 'Server host key|Authenticated|Authentications that can continue|LOGIN_OK|uid=|ubuntu-router|denied'
+
+## Chave de host ED25519 (canal confiavel: docker exec)
+256 SHA256:bPDh5vZY30sr5pNBfdbc4EHGv0MGztwxaAIVkkwu2fo root@buildkitsandbox (ED25519)
+
+## Instancias sshd e portas
+State  Recv-Q Send-Q Local Address:Port  Peer Address:PortProcess
+LISTEN 0      128          0.0.0.0:22         0.0.0.0:*    users:(("sshd",pid=1,fd=3))
+LISTEN 0      4096      127.0.0.11:35669      0.0.0.0:*
+LISTEN 0      128          0.0.0.0:2222       0.0.0.0:*    users:(("sshd",pid=214,fd=4))
+LISTEN 0      128             [::]:22            [::]:*    users:(("sshd",pid=1,fd=4))
+
+## Conexao do host (10.10.10.254) para ubuntu@10.10.10.1:2222 com a chave do laboratorio
+debug1: Server host key: ssh-ed25519 SHA256:bPDh5vZY30sr5pNBfdbc4EHGv0MGztwxaAIVkkwu2fo
+debug1: Authentications that can continue: publickey,password
+Authenticated to 10.10.10.1 ([10.10.10.1]:2222) using "publickey".
+debug1: Sending command: echo LOGIN_OK; id; hostname
+LOGIN_OK
+uid=1000(ubuntu) gid=1000(ubuntu) groups=1000(ubuntu),4(adm),20(dialout),24(cdrom),25(floppy),27(sudo),29(audio),30(dip),44(video),46(plugdev)
+ubuntu-router
+# exit code: 0

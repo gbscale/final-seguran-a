@@ -1,0 +1,9 @@
+# Coletado em: 2026-11-23 23:58:44 -03
+# T-SSH4: porta 22 (instancia antiga, PID 1, ainda com configuracao padrao ate a recriacao do conteiner) e banner da 2222
+$ echo '## banner porta 2222'; timeout 3 nc 10.10.10.1 2222 </dev/null | head -1; echo '## banner porta 22'; timeout 3 nc 10.10.10.1 22 </dev/null | head -1
+
+## banner porta 2222
+SSH-2.0-OpenSSH_9.6p1
+## banner porta 22
+SSH-2.0-OpenSSH_9.6p1 Ubuntu-3ubuntu13.20
+# exit code: 0

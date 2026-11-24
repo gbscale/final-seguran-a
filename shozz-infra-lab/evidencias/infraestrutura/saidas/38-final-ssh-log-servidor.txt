@@ -1,0 +1,42 @@
+# Coletado em: 2026-11-24 00:09:01 -03
+# Log do servidor SSH definitivo (docker logs, LogLevel VERBOSE) referente aos testes 33 a 37
+$ docker logs shozz-ubuntu-router 2>&1
+
+ssh-keygen: generating new host keys: RSA ECDSA ED25519
+Server listening on 0.0.0.0 port 2222.
+Connection from 10.10.10.254 port 43460 on 10.10.10.1 port 2222 rdomain ""
+Accepted key ED25519 SHA256:0dJzpy9uBimbUqnwJLu1SQ2j88lYB3HVJC7wYeF+MuQ found at /home/ubuntu/.ssh/authorized_keys:1
+Postponed publickey for ubuntu from 10.10.10.254 port 43460 ssh2 [preauth]
+Accepted key ED25519 SHA256:0dJzpy9uBimbUqnwJLu1SQ2j88lYB3HVJC7wYeF+MuQ found at /home/ubuntu/.ssh/authorized_keys:1
+Accepted publickey for ubuntu from 10.10.10.254 port 43460 ssh2: ED25519 SHA256:0dJzpy9uBimbUqnwJLu1SQ2j88lYB3HVJC7wYeF+MuQ
+User child is on pid 86
+Starting session: command for ubuntu from 10.10.10.254 port 43460 id 0
+Received disconnect from 10.10.10.254 port 43460:11: disconnected by user
+Disconnected from user ubuntu 10.10.10.254 port 43460
+Connection from 10.20.20.254 port 36732 on 10.20.20.1 port 2222 rdomain ""
+Accepted key ED25519 SHA256:0dJzpy9uBimbUqnwJLu1SQ2j88lYB3HVJC7wYeF+MuQ found at /home/ubuntu/.ssh/authorized_keys:1
+Postponed publickey for ubuntu from 10.20.20.254 port 36732 ssh2 [preauth]
+Accepted key ED25519 SHA256:0dJzpy9uBimbUqnwJLu1SQ2j88lYB3HVJC7wYeF+MuQ found at /home/ubuntu/.ssh/authorized_keys:1
+Accepted publickey for ubuntu from 10.20.20.254 port 36732 ssh2: ED25519 SHA256:0dJzpy9uBimbUqnwJLu1SQ2j88lYB3HVJC7wYeF+MuQ
+User child is on pid 100
+Starting session: command for ubuntu from 10.20.20.254 port 36732 id 0
+Received disconnect from 10.20.20.254 port 36732:11: disconnected by user
+Disconnected from user ubuntu 10.20.20.254 port 36732
+Connection from 10.10.10.254 port 43470 on 10.10.10.1 port 2222 rdomain ""
+Connection closed by authenticating user ubuntu 10.10.10.254 port 43470 [preauth]
+Connection from 10.10.10.254 port 43482 on 10.10.10.1 port 2222 rdomain ""
+User root from 10.10.10.254 not allowed because not listed in AllowUsers
+Connection closed by invalid user root 10.10.10.254 port 43482 [preauth]
+Connection from 10.10.10.254 port 43484 on 10.10.10.1 port 2222 rdomain ""
+kex_exchange_identification: Connection closed by remote host
+Connection closed by 10.10.10.254 port 43484
+Connection from 10.10.10.10 port 38069 on 10.10.10.1 port 2222 rdomain ""
+kex_exchange_identification: Connection closed by remote host
+Connection closed by 10.10.10.10 port 38069
+Connection from 10.20.20.10 port 33083 on 10.20.20.1 port 2222 rdomain ""
+kex_exchange_identification: Connection closed by remote host
+Connection closed by 10.20.20.10 port 33083
+Connection from 10.10.10.10 port 38151 on 10.20.20.1 port 2222 rdomain ""
+kex_exchange_identification: Connection closed by remote host
+Connection closed by 10.10.10.10 port 38151
+# exit code: 0

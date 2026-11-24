@@ -1,0 +1,11 @@
+# Coletado em: 2026-11-24 00:08:39 -03
+# Estado final: contador Ip:ForwDatagrams do roteador antes/depois de ping -c 10 WAN->LAN
+ForwDatagrams antes : 28
+$ docker exec shozz-cliente-wan ping -c 10 -q 10.10.10.10
+PING 10.10.10.10 (10.10.10.10): 56 data bytes
+
+--- 10.10.10.10 ping statistics ---
+10 packets transmitted, 10 packets received, 0% packet loss
+round-trip min/avg/max = 0.141/0.225/0.334 ms
+ForwDatagrams depois: 48
+Diferenca: 20  (esperado: 20 = 10 echo-request + 10 echo-reply)
