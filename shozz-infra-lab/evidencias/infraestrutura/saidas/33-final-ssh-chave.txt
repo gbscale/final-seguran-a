@@ -1,0 +1,25 @@
+# Coletado em: 2026-11-24 00:08:58 -03
+# T-SSH1 final: login de ubuntu por chave na porta 2222 pela LAN e pela WAN. A impressao digital apresentada deve ser igual a ED25519 listada no arquivo 32.
+$ for ip in 10.10.10.1 10.20.20.1; do echo "## ubuntu@$ip:2222"; ssh -i /home/gabriel/.ssh/shozz_lab_ed25519 -o IdentitiesOnly=yes -o UserKnownHostsFile=/tmp/claude-1000/-home-gabriel-Rotier/016038b1-2fe6-4b7c-b7f0-36823ef92060/scratchpad/known_hosts_lab -o StrictHostKeyChecking=accept-new -o BatchMode=yes -o ConnectTimeout=5 -p 2222 -v ubuntu@$ip 'echo LOGIN_OK; id; hostname' 2>&1 | grep -E 'Server host key|Authenticated|Authentications that can continue|LOGIN_OK|uid=|Permission denied|Remote protocol version|^ubuntu-router|Connection refused|sudo'; echo; done
+
+## ubuntu@10.10.10.1:2222
+debug1: Remote protocol version 2.0, remote software version OpenSSH_9.6p1
+debug1: Server host key: ssh-ed25519 SHA256:ZDxX9lRQcaxbtwu7ksoLBmydAOkSt7gr33XGUadjeQ0
+debug1: Authentications that can continue: publickey
+Authenticated to 10.10.10.1 ([10.10.10.1]:2222) using "publickey".
+debug1: Sending command: echo LOGIN_OK; id; hostname
+LOGIN_OK
+uid=1000(ubuntu) gid=1000(ubuntu) groups=1000(ubuntu),4(adm),20(dialout),24(cdrom),25(floppy),27(sudo),29(audio),30(dip),44(video),46(plugdev)
+ubuntu-router
+
+## ubuntu@10.20.20.1:2222
+debug1: Remote protocol version 2.0, remote software version OpenSSH_9.6p1
+debug1: Server host key: ssh-ed25519 SHA256:ZDxX9lRQcaxbtwu7ksoLBmydAOkSt7gr33XGUadjeQ0
+debug1: Authentications that can continue: publickey
+Authenticated to 10.20.20.1 ([10.20.20.1]:2222) using "publickey".
+debug1: Sending command: echo LOGIN_OK; id; hostname
+LOGIN_OK
+uid=1000(ubuntu) gid=1000(ubuntu) groups=1000(ubuntu),4(adm),20(dialout),24(cdrom),25(floppy),27(sudo),29(audio),30(dip),44(video),46(plugdev)
+ubuntu-router
+
+# exit code: 0

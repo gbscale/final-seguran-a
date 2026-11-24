@@ -1,0 +1,8 @@
+# Coletado em: 2026-11-23 23:58:43 -03
+# T-SSH2: tentativa de autenticacao SOMENTE por senha (chave desativada no cliente). Nenhuma senha e digitada: BatchMode impede prompt; o objetivo e ver se o servidor oferece o metodo password.
+$ ssh -o PubkeyAuthentication=no -o PreferredAuthentications=password,keyboard-interactive -o UserKnownHostsFile=/tmp/claude-1000/-home-gabriel-Rotier/016038b1-2fe6-4b7c-b7f0-36823ef92060/scratchpad/known_hosts_lab -o BatchMode=yes -o ConnectTimeout=5 -p 2222 -v ubuntu@10.10.10.1 true 2>&1 | grep -E 'Authenticated|Authentications that can continue|LOGIN_OK|uid=|Permission denied|Remote protocol version|^ubuntu-router'
+
+debug1: Remote protocol version 2.0, remote software version OpenSSH_9.6p1
+debug1: Authentications that can continue: publickey
+ubuntu@10.10.10.1: Permission denied (publickey).
+# exit code: 0

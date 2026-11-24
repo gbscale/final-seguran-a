@@ -1,0 +1,74 @@
+# Coletado em: 2026-11-23 23:58:59 -03
+# Analise de hardening do conteiner roteador ANTES das alteracoes na imagem (somente leitura, exceto apt-get update das listas de pacotes)
+$ echo '## Atualizacoes disponiveis'; docker exec shozz-ubuntu-router sh -c 'apt-get update -qq >/dev/null 2>&1; apt list --upgradable 2>/dev/null | tail -n +2'; echo; echo '## Pacotes instalados (total)'; docker exec shozz-ubuntu-router sh -c 'dpkg -l | grep -c ^ii'; echo; echo '## Pacotes instalados explicitamente pelo Dockerfile'; docker exec shozz-ubuntu-router dpkg -l iproute2 iputils-ping openssh-server sudo ca-certificates | grep ^ii | awk '{print $2, $3}'; echo; echo '## Processos'; docker exec shozz-ubuntu-router ps -eo pid,user,args; echo; echo '## Contas com shell de login'; docker exec shozz-ubuntu-router sh -c 'grep -vE "(nologin|false|sync)$" /etc/passwd'; echo; echo '## Estado das senhas (L = bloqueada)'; docker exec shozz-ubuntu-router sh -c 'for u in root ubuntu; do passwd -S $u; done'; echo; echo '## Grupos do usuario ubuntu'; docker exec shozz-ubuntu-router id ubuntu; echo; echo '## Contas com UID 0'; docker exec shozz-ubuntu-router awk -F: '$3==0{print $1}' /etc/passwd; echo; echo '## Senhas vazias em /etc/shadow (esperado: nenhuma)'; docker exec shozz-ubuntu-router sh -c 'awk -F: "\$2==\"\"{print \$1}" /etc/shadow; echo fim'; echo; echo '## Binarios SUID'; docker exec shozz-ubuntu-router find / -xdev -perm -4000 -type f; echo; echo '## Permissoes de arquivos sensiveis'; docker exec shozz-ubuntu-router ls -l /etc/passwd /etc/shadow /etc/group /etc/gshadow /etc/sudoers /etc/ssh/sshd_config; docker exec shozz-ubuntu-router sh -c 'ls -l /etc/ssh/ssh_host_*'; echo; echo '## Comentario das chaves de host (origem)'; docker exec shozz-ubuntu-router sh -c 'cut -d" " -f3 /etc/ssh/ssh_host_*_key.pub'
+
+## Atualizacoes disponiveis
+libc-bin/noble-updates,noble-security 2.39-0ubuntu8.12 amd64 [upgradable from: 2.39-0ubuntu8.9]
+libc6/noble-updates,noble-security 2.39-0ubuntu8.12 amd64 [upgradable from: 2.39-0ubuntu8.9]
+libsystemd0/noble-updates 255.4-1ubuntu8.19 amd64 [upgradable from: 255.4-1ubuntu8.18]
+libudev1/noble-updates 255.4-1ubuntu8.19 amd64 [upgradable from: 255.4-1ubuntu8.18]
+
+## Pacotes instalados (total)
+118
+
+## Pacotes instalados explicitamente pelo Dockerfile
+ca-certificates 20260816ubuntu0.24.04.2
+iproute2 6.1.0-1ubuntu6.4
+iputils-ping 3:20240117-1ubuntu0.1
+openssh-server 1:9.6p1-3ubuntu13.20
+sudo 1.9.15p5-3ubuntu5.24.04.4
+
+## Processos
+    PID USER     COMMAND
+      1 root     sshd: /usr/sbin/sshd -D -e [listener] 0 of 10-100 startups
+    214 root     sshd: /usr/sbin/sshd -D -E /var/log/sshd-teste-2222.log -o PidFile=/run/sshd-teste-2222.pid [listener] 0 of 10-100 startups
+    474 root     ps -eo pid,user,args
+
+## Contas com shell de login
+root:x:0:0:root:/root:/bin/bash
+ubuntu:x:1000:1000:Ubuntu:/home/ubuntu:/bin/bash
+
+## Estado das senhas (L = bloqueada)
+root L 2026-11-10 0 99999 7 -1
+ubuntu L 2026-11-10 0 99999 7 -1
+
+## Grupos do usuario ubuntu
+uid=1000(ubuntu) gid=1000(ubuntu) groups=1000(ubuntu),4(adm),20(dialout),24(cdrom),25(floppy),27(sudo),29(audio),30(dip),44(video),46(plugdev)
+
+## Contas com UID 0
+root
+
+## Senhas vazias em /etc/shadow (esperado: nenhuma)
+fim
+
+## Binarios SUID
+/usr/bin/newgrp
+/usr/bin/su
+/usr/bin/chsh
+/usr/bin/passwd
+/usr/bin/gpasswd
+/usr/bin/mount
+/usr/bin/chfn
+/usr/bin/umount
+/usr/bin/sudo
+/usr/lib/openssh/ssh-keysign
+
+## Permissoes de arquivos sensiveis
+-rw-r--r-- 1 root root    515 Nov 23 18:45 /etc/group
+-rw-r----- 1 root shadow  438 Nov 23 18:45 /etc/gshadow
+-rw-r--r-- 1 root root    934 Nov 23 18:45 /etc/passwd
+-rw-r----- 1 root shadow  521 Nov 23 18:45 /etc/shadow
+-rw-r--r-- 1 root root   3517 Oct  8 17:19 /etc/ssh/sshd_config
+-r--r----- 1 root root   1800 Jan 29  2024 /etc/sudoers
+-rw------- 1 root root  513 Nov 23 18:45 /etc/ssh/ssh_host_ecdsa_key
+-rw-r--r-- 1 root root  182 Nov 23 18:45 /etc/ssh/ssh_host_ecdsa_key.pub
+-rw------- 1 root root  411 Nov 23 18:45 /etc/ssh/ssh_host_ed25519_key
+-rw-r--r-- 1 root root  102 Nov 23 18:45 /etc/ssh/ssh_host_ed25519_key.pub
+-rw------- 1 root root 2610 Nov 23 18:45 /etc/ssh/ssh_host_rsa_key
+-rw-r--r-- 1 root root  574 Nov 23 18:45 /etc/ssh/ssh_host_rsa_key.pub
+
+## Comentario das chaves de host (origem)
+root@buildkitsandbox
+root@buildkitsandbox
+root@buildkitsandbox
+# exit code: 0

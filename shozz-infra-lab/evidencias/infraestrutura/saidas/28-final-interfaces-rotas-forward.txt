@@ -1,0 +1,29 @@
+# Coletado em: 2026-11-24 00:08:13 -03
+# Estado final: interfaces, rotas e ip_forward dos tres conteineres
+$ echo '## ubuntu-router'; docker exec shozz-ubuntu-router ip -br addr; docker exec shozz-ubuntu-router ip route; docker exec shozz-ubuntu-router sysctl net.ipv4.ip_forward; for c in cliente-lan cliente-wan; do echo; echo "## $c"; docker exec shozz-$c ip -4 addr show eth0; docker exec shozz-$c ip route; done
+
+## ubuntu-router
+lo               UNKNOWN        127.0.0.1/8 ::1/128
+eth0@if27        UP             10.20.20.1/24
+eth1@if28        UP             10.10.10.1/24
+default via 10.10.10.254 dev eth1
+10.10.10.0/24 dev eth1 proto kernel scope link src 10.10.10.1
+10.20.20.0/24 dev eth0 proto kernel scope link src 10.20.20.1
+net.ipv4.ip_forward = 1
+
+## cliente-lan
+2: eth0@if16: <BROADCAST,MULTICAST,UP,LOWER_UP,M-DOWN> mtu 1500 qdisc noqueue state UP
+    inet 10.10.10.10/24 brd 10.10.10.255 scope global eth0
+       valid_lft forever preferred_lft forever
+default via 10.10.10.254 dev eth0
+10.10.10.0/24 dev eth0 scope link  src 10.10.10.10
+10.20.20.0/24 via 10.10.10.1 dev eth0
+
+## cliente-wan
+2: eth0@if19: <BROADCAST,MULTICAST,UP,LOWER_UP,M-DOWN> mtu 1500 qdisc noqueue state UP
+    inet 10.20.20.10/24 brd 10.20.20.255 scope global eth0
+       valid_lft forever preferred_lft forever
+default via 10.20.20.254 dev eth0
+10.10.10.0/24 via 10.20.20.1 dev eth0
+10.20.20.0/24 dev eth0 scope link  src 10.20.20.10
+# exit code: 0

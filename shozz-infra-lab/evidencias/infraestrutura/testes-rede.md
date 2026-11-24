@@ -199,8 +199,8 @@ Nenhuma delas impede o funcionamento do roteamento. Todas foram registradas para
 | ID | Descrição | Impacto | Recomendação |
 |---|---|---|---|
 | I-1 | O projeto Compose está em execução com o nome `shozz-infra-lab`, mas o `docker-compose.yml` não define `name:`. Sem `-p shozz-infra-lab`, comandos como `docker compose ps` ou `down` executados em `infraestrutura/` usam o nome `infraestrutura` e não encontram os contêineres. Se alguém executar `docker compose up` sem `-p`, haverá conflito de `container_name`. | Operacional | **Corrigido na revisão final:** `name: shozz-infra-lab` foi adicionado ao Compose com autorização. `docker compose config` foi validado (exit 0) e `docker compose ps` sem `-p` encontra os contêineres ([`16`](saidas/16-verificacoes-complementares.txt)). |
-| I-2 | O Dockerfile declara `EXPOSE 2222`, mas o `sshd` escuta na porta **22** (`ss -tlnp` e `sshd -T`). O `docker ps` mostra `2222/tcp`, o que leva a erro de interpretação. O `EXPOSE` é só metadado e nenhuma porta está publicada no host. | Documental / SSH | Será resolvido na etapa de SSH seguro, ao configurar `Port 2222` no `sshd_config`. Veja [`15-estado-ssh-atual.txt`](saidas/15-estado-ssh-atual.txt). |
-| I-3 | O SSH do roteador ainda usa os padrões da distribuição: `port 22`, `permitrootlogin without-password`, `passwordauthentication yes`, e não há `AllowUsers`. | Segurança (etapa pendente) | Será tratado na etapa de hardening. **Ainda não está concluído.** |
+| I-2 | O Dockerfile declara `EXPOSE 2222`, mas o `sshd` escuta na porta **22** (`ss -tlnp` e `sshd -T`). O `docker ps` mostra `2222/tcp`, o que leva a erro de interpretação. O `EXPOSE` é só metadado e nenhuma porta está publicada no host. | Documental / SSH | Será resolvido na etapa de SSH seguro, ao configurar `Port 2222` no `sshd_config`. Veja [`15-estado-ssh-atual.txt`](saidas/15-estado-ssh-atual.txt). **Atualização 2026-11-24: corrigido.** O `sshd` escuta só na 2222 e a porta 22 está fechada ([`32`](saidas/32-final-ssh-configuracao-efetiva.txt), [`36`](saidas/36-final-ssh-porta-22-fechada.txt)). Ver seção 12. |
+| I-3 | O SSH do roteador ainda usa os padrões da distribuição: `port 22`, `permitrootlogin without-password`, `passwordauthentication yes`, e não há `AllowUsers`. | Segurança (etapa pendente) | Será tratado na etapa de hardening. **Ainda não está concluído.** **Atualização 2026-11-24: corrigido e testado** (`PermitRootLogin no`, `AllowUsers ubuntu`, somente `publickey`). Ver seção 12. |
 | I-4 | Os nomes `eth0` (WAN) e `eth1` (LAN) do roteador dependem da ordem em que o Docker conecta as redes. Essa ordem não é garantida entre recriações dos contêineres. | Documental | Identificar as interfaces pelo endereço IP, e não pelo nome. Os testes devem consultar `ip addr` em cada execução. |
 | I-5 | A rota padrão do roteador sai pela LAN (`via 10.10.10.254 dev eth1`), e não pela "WAN". No laboratório, a "WAN" é só uma segunda sub-rede interna, sem saída própria para a Internet. | Conceitual | Explicado no README. Não afeta o roteamento entre as sub-redes. |
 | I-6 | A rota estática dos clientes é criada pelo `command` do contêiner (`ip route replace ...`). Ela não é persistente fora desse comando e é recriada a cada inicialização. Se o roteador ainda não estiver pronto, a rota é criada mesmo assim, porque só depende do endereço do próximo salto estar na sub-rede local. | Baixo | Comportamento esperado. Está documentado. |
@@ -219,3 +219,102 @@ Em 2026-11-23, às 16:01–16:02 (UTC-03:00), a auditoria confirmou que:
 5. O tráfego entre as sub-redes atravessa o roteador Ubuntu. As provas, independentes entre si, são: `ip route get`, `traceroute` (1º salto = roteador), TTL 63 e o contador `ForwDatagrams` (+20 para 20 pacotes).
 
 **A infraestrutura de roteamento LAN/WAN está funcional e de acordo com a topologia planejada.** O endurecimento do SSH e o hardening do sistema **não** fazem parte desta validação e continuam pendentes (I-2, I-3). O isolamento do tráfego de saída também não foi configurado nem comprovado (I-8).
+
+> **Nota posterior (2026-11-24):** as pendências I-2 e I-3 citadas acima foram resolvidas na segunda auditoria (seção 12). A I-8 continua pendente por decisão do responsável.
+
+---
+
+## 12. Segunda auditoria — SSH seguro e hardening (2026-11-23 23:57 a 2026-11-24 00:09)
+
+Esta seção registra uma rodada **nova**. As seções 1 a 11 acima foram mantidas como registro da primeira auditoria. As saídas brutas desta rodada são os arquivos `17` a `39`, gravados sem espaços em branco no fim das linhas.
+
+### 12.1 Estado encontrado no início da rodada
+
+| Item | Situação encontrada | Fonte |
+|---|---|---|
+| Contêineres e rede | Os três em execução desde 2026-11-23 15:45; rede igual à da 1ª auditoria | `docker compose ps`, `ip route` |
+| SSH | `port 22`, `permitrootlogin without-password`, `passwordauthentication yes`, sem `AllowUsers`, `x11forwarding yes`, `maxauthtries 6` | [`hardening/backup/sshd-T.antes-hardening.txt`](../../hardening/backup/sshd-T.antes-hardening.txt) |
+| Usuários | Só `root` e `ubuntu` (UID 1000, grupos `sudo` e `adm`), os dois com senha bloqueada | [`26`](saidas/26-hardening-analise-inicial.txt) |
+| Chaves de host | Geradas no build e embutidas na imagem (comentário `root@buildkitsandbox`) | [`18`](saidas/18-ssh-etapa1-chave-ok.txt), [`26`](saidas/26-hardening-analise-inicial.txt) |
+| Atualizações | 4 pendentes: `libc6`, `libc-bin`, `libsystemd0`, `libudev1` | [`26`](saidas/26-hardening-analise-inicial.txt) |
+| Acesso ao SSH | O host alcança `10.10.10.1` e `10.20.20.1` diretamente pelas bridges, **sem publicar portas** | teste com `/dev/tcp` |
+
+### 12.2 Procedimento (ordem real de execução)
+
+1. **Backups** em [`hardening/backup/`](../../hardening/backup/): `Dockerfile`, `docker-compose.yml`, `sshd_config` original e `sshd -T` inicial. No contêiner antigo, também em `/root/backup-ssh`.
+2. Geração de um par de chaves ED25519 **dedicado ao laboratório** no host (`~/.ssh/shozz_lab_ed25519`, impressão digital `SHA256:0dJzpy9uBimbUqnwJLu1SQ2j88lYB3HVJC7wYeF+MuQ`). Só a chave pública foi para o repositório.
+3. **Etapa 1**, com a senha ainda habilitada: `10-shozz-hardening.conf` instalado com `PasswordAuthentication yes` e sem `AuthenticationMethods`; `sshd -t` OK; segunda instância do `sshd` na porta 2222, com a instância original mantida na 22 como acesso de reserva ([`17`](saidas/17-ssh-etapa1-validacao.txt)). Login por chave confirmado ([`18`](saidas/18-ssh-etapa1-chave-ok.txt)).
+4. **Etapa 2**, só depois da chave validada: configuração final (`PasswordAuthentication no`, `AuthenticationMethods publickey`), `sshd -t` OK e `SIGHUP` só na instância de teste ([`19`](saidas/19-ssh-etapa2-validacao.txt)). Testes [`20`](saidas/20-ssh-teste-chave.txt) a [`25`](saidas/25-ssh-log-servidor.txt).
+5. **Análise de hardening** ([`26`](saidas/26-hardening-analise-inicial.txt)).
+6. **Decisões do responsável:** recriar só o roteador (autorizado); adiar `internal: true`; manter `ubuntu` no grupo `sudo` e o pacote `sudo`.
+7. **Persistência:** novo `Dockerfile` (com `apt-get upgrade`, remoção das chaves de host da imagem, cópia dos arquivos de `hardening/` e permissões), `context: ..` no Compose e `.dockerignore`. `docker compose config --quiet` OK, `docker compose build ubuntu-router` OK; a imagem foi conferida sem chaves de host; `docker compose up -d --no-deps ubuntu-router`. Os clientes **não** foram recriados: mantêm o ID do contêiner e o horário de início 2026-11-23T18:45:5x Z ([`27`](saidas/27-final-estado-conteineres-redes.txt)).
+8. **Testes finais** [`27`](saidas/27-final-estado-conteineres-redes.txt) a [`39`](saidas/39-final-hardening.txt).
+
+### 12.3 Resultados da rede após a recriação do roteador
+
+| Teste | Resultado | Comparação com a 1ª auditoria | Evidência |
+|---|---|---|---|
+| Redes e endereços | `shozz_lan` 10.10.10.0/24 gw .254, `shozz_wan` 10.20.20.0/24 gw .254; roteador .1/.1, clientes .10/.10; `internal=false`; sem portas publicadas | Igual | [`27`](saidas/27-final-estado-conteineres-redes.txt) |
+| Interfaces do roteador | `eth0` 10.20.20.1 (WAN), `eth1` 10.10.10.1 (LAN) | Igual (veth `@if27`/`@if28`, antes `@if17`/`@if18`) | [`28`](saidas/28-final-interfaces-rotas-forward.txt) |
+| Rotas (3 contêineres) | Idênticas às da seção 5 | Igual | [`28`](saidas/28-final-interfaces-rotas-forward.txt) |
+| `ip_forward` do roteador | `1` | Igual | [`28`](saidas/28-final-interfaces-rotas-forward.txt) |
+| T1 LAN → roteador | 4/4, 0%, TTL 64, RTT médio 0,709 ms | Aprovado nas duas | [`29`](saidas/29-final-ping.txt) |
+| T2 WAN → roteador | 4/4, 0%, TTL 64, RTT médio 0,168 ms | Aprovado nas duas | [`29`](saidas/29-final-ping.txt) |
+| T3 LAN → WAN | 4/4, 0%, TTL 63, RTT médio 0,477 ms | Aprovado nas duas | [`29`](saidas/29-final-ping.txt) |
+| T4 WAN → LAN | 4/4, 0%, TTL 63, RTT médio 0,209 ms | Aprovado nas duas | [`29`](saidas/29-final-ping.txt) |
+| `ip route get` e traceroute | 1º salto `10.10.10.1` (LAN→WAN) e `10.20.20.1` (WAN→LAN) | Igual | [`30`](saidas/30-final-traceroute-route-get.txt) |
+| `ForwDatagrams` | 28 → 48 (+20) com `ping -c 10` WAN→LAN | Antes: 44 → 64 (+20), LAN→WAN. Agora o sentido oposto também está comprovado | [`31`](saidas/31-final-contador-encaminhamento.txt) |
+
+### 12.4 Resultados do SSH
+
+| # | Teste | Instância de teste (23:58) | Configuração definitiva (00:09) |
+|---|---|---|---|
+| — | `sshd -t` | OK ([`17`](saidas/17-ssh-etapa1-validacao.txt), [`19`](saidas/19-ssh-etapa2-validacao.txt)) | OK ([`32`](saidas/32-final-ssh-configuracao-efetiva.txt)) |
+| — | `sshd -T`: `port 2222`, `permitrootlogin no`, `allowusers ubuntu`, `authenticationmethods publickey`, `passwordauthentication no`, `kbdinteractiveauthentication no` | Confirmado ([`19`](saidas/19-ssh-etapa2-validacao.txt)) | Confirmado ([`32`](saidas/32-final-ssh-configuracao-efetiva.txt)) |
+| — | Escuta (`ss -tlnp`) | 22 (PID 1, antiga) e 2222 (teste) | **Só 0.0.0.0:2222** ([`32`](saidas/32-final-ssh-configuracao-efetiva.txt)) |
+| T-SSH1 | `ubuntu` com chave, pela LAN e pela WAN | Aprovado ([`18`](saidas/18-ssh-etapa1-chave-ok.txt), [`20`](saidas/20-ssh-teste-chave.txt)) | Aprovado ([`33`](saidas/33-final-ssh-chave.txt)) |
+| T-SSH2 | Só senha/keyboard-interactive | Negado: servidor anuncia só `publickey` ([`21`](saidas/21-ssh-teste-senha-bloqueada.txt)) | Negado ([`34`](saidas/34-final-ssh-senha-bloqueada.txt)) |
+| T-SSH3 | `root` com a chave | Negado; log `not listed in AllowUsers` ([`22`](saidas/22-ssh-teste-root-bloqueado.txt), [`25`](saidas/25-ssh-log-servidor.txt)) | Negado ([`35`](saidas/35-final-ssh-root-bloqueado.txt), [`38`](saidas/38-final-ssh-log-servidor.txt)) |
+| T-SSH4 | Porta 22 | Ainda aberta (instância antiga, esperado) ([`23`](saidas/23-ssh-teste-porta-22-antiga.txt)) | `Connection refused` ([`36`](saidas/36-final-ssh-porta-22-fechada.txt)) |
+| T-SSH5 | 2222 a partir dos clientes | Aberta ([`24`](saidas/24-ssh-porta-2222-a-partir-dos-clientes.txt)) | Aberta, inclusive roteada LAN→10.20.20.1 ([`37`](saidas/37-final-ssh-alcance-clientes.txt)) |
+| — | Impressão digital do servidor | `bPDh5v…` (`root@buildkitsandbox`) | `ZDxX9l…` (`root@ubuntu-router`), igual à conferida via `docker exec` ([`32`](saidas/32-final-ssh-configuracao-efetiva.txt), [`33`](saidas/33-final-ssh-chave.txt)) |
+
+Observações sobre os logs:
+
+- As linhas `invalid protocol identifier` e `kex_exchange_identification: Connection closed by remote host` vêm dos testes de porta (`/dev/tcp`, `nc -z`, leitura do banner), que abrem a conexão TCP sem negociar o SSH. Não são falhas.
+- No T-SSH2, a linha `Connection closed by authenticating user ubuntu ... [preauth]` mostra que o cliente desistiu porque o servidor não ofereceu nenhum método compatível. Nenhuma senha foi enviada.
+
+### 12.5 Hardening do contêiner
+
+Resultado ([`39`](saidas/39-final-hardening.txt)):
+
+- **0** atualizações pendentes; os 4 pacotes listados no arquivo `26` estão nas versões novas;
+- um único processo (`sshd`, PID 1);
+- permissões corretas em `sshd_config`, `10-shozz-hardening.conf` (`600`), chaves de host privadas (`600`), `~ubuntu/.ssh` (`700`), `authorized_keys` (`600`), `/etc/shadow` e `/etc/gshadow` (`640 root:shadow`) e `/etc/sudoers` (`440`);
+- só `root` com UID 0; `root` e `ubuntu` com senha bloqueada;
+- `sudo -n true` como `ubuntu` → `a password is required`;
+- administração como root disponível via `docker exec` (`uid=0`).
+
+Os binários SUID foram mantidos (ver I-11).
+
+**Escopo:** nada disso foi aplicado ao host Linux Mint.
+
+### 12.6 Novas observações
+
+| ID | Descrição | Situação |
+|---|---|---|
+| I-10 | As chaves de host do SSH estavam embutidas na imagem: todo contêiner criado a partir dela teria a mesma identidade. | **Corrigido**: removidas no build e geradas pelo `entrypoint.sh`. |
+| I-11 | `ubuntu` nos grupos `sudo`/`adm`; SUID em `ssh-keysign`, `chfn`, `chsh` e outros. | **Mantido por decisão do responsável.** `sudo` é inutilizável sem senha. Remoção registrada como recomendação. |
+| I-12 | O SSH aceita conexões vindas da LAN e da WAN. | Comportamento atual, documentado. Restrição por origem fica como recomendação ou tarefa de firewall (outro integrante). |
+| I-13 | O rebuild deixou a imagem anterior do roteador sem tag (`<none>`). | Não foi apagada, conforme as regras. Pode ser removida manualmente com `docker image prune`, se desejado. |
+| I-8 | Isolamento de saída (`internal: true`). | **Adiado** por decisão do responsável. A análise de impacto está no `shozz-infra-lab/README.md`, seção 8. |
+
+### 12.7 Conclusão da segunda auditoria
+
+Em 2026-11-24, às 00:08–00:09, com o roteador recriado a partir da imagem endurecida:
+
+1. A infraestrutura de rede continua idêntica e funcional. Os quatro testes de conectividade passaram com 0% de perda, e o encaminhamento pelo roteador foi comprovado nos dois sentidos.
+2. O SSH escuta **somente na porta 2222**, aceita **somente chave pública**, **somente do usuário `ubuntu`**, e recusa `root` e senha. Isso foi comprovado com testes reais de autenticação e com o log do servidor.
+3. A senha só foi desativada **depois** de comprovado o login por chave, e o servidor nunca ficou sem forma de administração (porta 22 de reserva durante os testes e `docker exec` sempre disponível).
+4. O hardening foi aplicado **no contêiner**, e o host não foi alterado.
+5. Continuam pendentes: o isolamento de saída (I-8) e as recomendações de menor privilégio (I-11).

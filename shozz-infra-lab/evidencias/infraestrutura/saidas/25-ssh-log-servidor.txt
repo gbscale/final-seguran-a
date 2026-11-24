@@ -1,0 +1,50 @@
+# Coletado em: 2026-11-23 23:58:45 -03
+# Log do servidor (instancia de teste, LogLevel VERBOSE) referente aos testes T-SSH1 a T-SSH3
+$ docker exec shozz-ubuntu-router grep -vE 'Server listening|Received SIGHUP|re-exec' /var/log/sshd-teste-2222.log
+
+Connection from 10.10.10.254 port 53542 on 10.10.10.1 port 2222 rdomain ""
+kex_exchange_identification: client sent invalid protocol identifier ""
+banner exchange: Connection from 10.10.10.254 port 53542: invalid format
+Connection from 10.10.10.254 port 53550 on 10.10.10.1 port 2222 rdomain ""
+Accepted key ED25519 SHA256:0dJzpy9uBimbUqnwJLu1SQ2j88lYB3HVJC7wYeF+MuQ found at /home/ubuntu/.ssh/authorized_keys:1
+Postponed publickey for ubuntu from 10.10.10.254 port 53550 ssh2 [preauth]
+Accepted key ED25519 SHA256:0dJzpy9uBimbUqnwJLu1SQ2j88lYB3HVJC7wYeF+MuQ found at /home/ubuntu/.ssh/authorized_keys:1
+Accepted publickey for ubuntu from 10.10.10.254 port 53550 ssh2: ED25519 SHA256:0dJzpy9uBimbUqnwJLu1SQ2j88lYB3HVJC7wYeF+MuQ
+User child is on pid 244
+Starting session: command for ubuntu from 10.10.10.254 port 53550 id 0
+Close session: user ubuntu from 10.10.10.254 port 53550 id 0
+Received disconnect from 10.10.10.254 port 53550:11: disconnected by user
+Disconnected from user ubuntu 10.10.10.254 port 53550
+Connection from 10.10.10.254 port 60032 on 10.10.10.1 port 2222 rdomain ""
+Accepted key ED25519 SHA256:0dJzpy9uBimbUqnwJLu1SQ2j88lYB3HVJC7wYeF+MuQ found at /home/ubuntu/.ssh/authorized_keys:1
+Postponed publickey for ubuntu from 10.10.10.254 port 60032 ssh2 [preauth]
+Accepted key ED25519 SHA256:0dJzpy9uBimbUqnwJLu1SQ2j88lYB3HVJC7wYeF+MuQ found at /home/ubuntu/.ssh/authorized_keys:1
+Accepted publickey for ubuntu from 10.10.10.254 port 60032 ssh2: ED25519 SHA256:0dJzpy9uBimbUqnwJLu1SQ2j88lYB3HVJC7wYeF+MuQ
+User child is on pid 294
+Starting session: command for ubuntu from 10.10.10.254 port 60032 id 0
+Received disconnect from 10.10.10.254 port 60032:11: disconnected by user
+Disconnected from user ubuntu 10.10.10.254 port 60032
+Connection from 10.20.20.254 port 47418 on 10.20.20.1 port 2222 rdomain ""
+Accepted key ED25519 SHA256:0dJzpy9uBimbUqnwJLu1SQ2j88lYB3HVJC7wYeF+MuQ found at /home/ubuntu/.ssh/authorized_keys:1
+Postponed publickey for ubuntu from 10.20.20.254 port 47418 ssh2 [preauth]
+Accepted key ED25519 SHA256:0dJzpy9uBimbUqnwJLu1SQ2j88lYB3HVJC7wYeF+MuQ found at /home/ubuntu/.ssh/authorized_keys:1
+Accepted publickey for ubuntu from 10.20.20.254 port 47418 ssh2: ED25519 SHA256:0dJzpy9uBimbUqnwJLu1SQ2j88lYB3HVJC7wYeF+MuQ
+User child is on pid 307
+Starting session: command for ubuntu from 10.20.20.254 port 47418 id 0
+Received disconnect from 10.20.20.254 port 47418:11: disconnected by user
+Disconnected from user ubuntu 10.20.20.254 port 47418
+Connection from 10.10.10.254 port 60046 on 10.10.10.1 port 2222 rdomain ""
+Connection closed by authenticating user ubuntu 10.10.10.254 port 60046 [preauth]
+Connection from 10.10.10.254 port 60062 on 10.10.10.1 port 2222 rdomain ""
+User root from 10.10.10.254 not allowed because not listed in AllowUsers
+Connection closed by invalid user root 10.10.10.254 port 60062 [preauth]
+Connection from 10.10.10.254 port 60064 on 10.10.10.1 port 2222 rdomain ""
+kex_exchange_identification: Connection closed by remote host
+Connection closed by 10.10.10.254 port 60064
+Connection from 10.10.10.10 port 33541 on 10.10.10.1 port 2222 rdomain ""
+kex_exchange_identification: Connection closed by remote host
+Connection closed by 10.10.10.10 port 33541
+Connection from 10.20.20.10 port 39843 on 10.20.20.1 port 2222 rdomain ""
+kex_exchange_identification: Connection closed by remote host
+Connection closed by 10.20.20.10 port 39843
+# exit code: 0

@@ -1,0 +1,22 @@
+# Coletado em: 2026-11-24 00:08:12 -03
+# Estado final: conteineres (roteador recriado com a nova imagem; clientes NAO recriados), redes e portas publicadas
+$ docker compose ps; echo; for c in shozz-ubuntu-router shozz-cliente-lan shozz-cliente-wan; do docker inspect $c --format '{{.Name}} imagem={{.Config.Image}} iniciado={{.State.StartedAt}} portas_publicadas={{.HostConfig.PortBindings}}'; done; echo; for n in shozz_lan shozz_wan; do docker network inspect $n --format '{{.Name}} driver={{.Driver}} internal={{.Internal}} subnet={{(index .IPAM.Config 0).Subnet}} gateway={{(index .IPAM.Config 0).Gateway}}{{range .Containers}}{{println}}  {{.Name}} {{.IPv4Address}}{{end}}'; done; echo; echo '## docker port (vazio = nada publicado no host)'; docker port shozz-ubuntu-router
+
+NAME                  IMAGE                           COMMAND                  SERVICE         CREATED          STATUS          PORTS
+shozz-cliente-lan     alpine:3.22                     "sh -c 'ip route rep…"   cliente-lan     8 hours ago      Up 8 hours
+shozz-cliente-wan     alpine:3.22                     "sh -c 'ip route rep…"   cliente-wan     8 hours ago      Up 8 hours
+shozz-ubuntu-router   shozz-infra-lab-ubuntu-router   "/usr/local/sbin/sho…"   ubuntu-router   20 seconds ago   Up 19 seconds   2222/tcp
+
+/shozz-ubuntu-router imagem=shozz-infra-lab-ubuntu-router iniciado=2026-11-24T03:07:53.579323239Z portas_publicadas=map[]
+/shozz-cliente-lan imagem=alpine:3.22 iniciado=2026-11-23T18:45:53.571520867Z portas_publicadas=map[]
+/shozz-cliente-wan imagem=alpine:3.22 iniciado=2026-11-23T18:45:54.618819405Z portas_publicadas=map[]
+
+shozz_lan driver=bridge internal=false subnet=10.10.10.0/24 gateway=10.10.10.254
+  shozz-ubuntu-router 10.10.10.1/24
+  shozz-cliente-lan 10.10.10.10/24
+shozz_wan driver=bridge internal=false subnet=10.20.20.0/24 gateway=10.20.20.254
+  shozz-ubuntu-router 10.20.20.1/24
+  shozz-cliente-wan 10.20.20.10/24
+
+## docker port (vazio = nada publicado no host)
+# exit code: 0

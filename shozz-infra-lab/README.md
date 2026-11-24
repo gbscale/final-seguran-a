@@ -1,7 +1,9 @@
-# Shozz Infra Lab — Laboratório de Roteamento LAN/WAN com Docker
+# Shozz Infra Lab — Infraestrutura LAN/WAN, Roteamento e SSH Seguro com Docker
 
 > Projeto acadêmico de **Segurança da Informação**, com um laboratório autorizado pelo professor da disciplina.
-> Este documento trata da **infraestrutura de rede**. As demais frentes do trabalho (SSH seguro, hardening, firewall e integridade) estão indicadas como etapas futuras ou responsabilidade de outros integrantes.
+> Este documento cobre a parte de **infraestrutura**: redes LAN/WAN, roteamento, SSH seguro e hardening do roteador Ubuntu.
+> Firewall, testes de varredura e DoS, criptografia e integridade pertencem a outros integrantes e estão fora deste documento.
+> O documento geral do grupo é o [`README.md` da raiz](../README.md).
 
 ---
 
@@ -18,42 +20,45 @@
 9. [Funcionamento do roteador Ubuntu](#9-funcionamento-do-roteador-ubuntu)
 10. [Encaminhamento IPv4](#10-encaminhamento-ipv4)
 11. [Rotas: diretamente conectadas, estáticas e gateway padrão](#11-rotas-diretamente-conectadas-estáticas-e-gateway-padrão)
-12. [Procedimentos de inicialização](#12-procedimentos-de-inicialização)
-13. [Comandos úteis de administração](#13-comandos-úteis-de-administração)
-14. [Testes executados](#14-testes-executados)
-15. [Resultados reais dos testes](#15-resultados-reais-dos-testes)
-16. [Evidências](#16-evidências)
-17. [Limitações e considerações técnicas](#17-limitações-e-considerações-técnicas)
-18. [Etapas futuras do projeto](#18-etapas-futuras-do-projeto)
-19. [Conclusão](#19-conclusão)
+12. [Configuração do SSH](#12-configuração-do-ssh)
+13. [Hardening aplicado](#13-hardening-aplicado)
+14. [Procedimentos de inicialização](#14-procedimentos-de-inicialização)
+15. [Comandos úteis de administração](#15-comandos-úteis-de-administração)
+16. [Testes executados](#16-testes-executados)
+17. [Resultados reais dos testes](#17-resultados-reais-dos-testes)
+18. [Evidências](#18-evidências)
+19. [Limitações e considerações técnicas](#19-limitações-e-considerações-técnicas)
+20. [Itens concluídos e pendentes](#20-itens-concluídos-e-pendentes)
+21. [Conclusão](#21-conclusão)
 
 ---
 
 ## 1. Descrição e objetivo
 
-O **Shozz Infra Lab** simula, com contêineres Docker, uma pequena infraestrutura com **duas sub-redes IPv4 interligadas por um roteador Linux (Ubuntu 24.04)**.
+O **Shozz Infra Lab** simula, com contêineres Docker, uma pequena infraestrutura com **duas sub-redes IPv4 interligadas por um roteador Linux (Ubuntu 24.04)**, cujo acesso administrativo é feito por **SSH endurecido**.
 
-Objetivos desta etapa:
+Objetivos:
 
 - montar uma topologia LAN/WAN com duas sub-redes separadas, fácil de reproduzir;
-- configurar um host Ubuntu para funcionar como **roteador**, com uma interface em cada sub-rede e encaminhamento IPv4 ativo;
+- configurar um contêiner Ubuntu como **roteador**, com uma interface em cada sub-rede e encaminhamento IPv4 ativo;
 - configurar clientes que só alcançam a rede oposta **através do roteador**;
-- **comprovar com testes reais** que o tráfego entre as sub-redes atravessa o roteador;
-- servir de base para as próximas etapas: SSH seguro, hardening do Ubuntu, firewall e integridade de arquivos.
+- proteger o acesso administrativo ao roteador: **SSH na porta 2222, somente por chave, sem root e restrito a um usuário**;
+- aplicar hardening compatível com o ambiente de contêiner;
+- **comprovar tudo com testes reais** e evidências salvas.
 
 ## 2. Contextualização do laboratório
 
-Em redes reais, um roteador interliga segmentos diferentes. Por exemplo, uma rede interna (LAN) e uma rede externa (WAN). Ele é o ponto natural para aplicar controles de segurança, como acesso administrativo restrito, filtragem de pacotes e registro de eventos. Por isso, o primeiro passo do trabalho é ter um roteador funcional e verificável, que depois será protegido.
+Em redes reais, um roteador interliga segmentos diferentes, como uma rede interna (LAN) e uma rede externa (WAN). Ele é o ponto natural para aplicar controles de segurança: acesso administrativo restrito, filtragem de pacotes e registro de eventos.
 
-O ambiente roda **inteiramente em uma única máquina física**, com Docker. A escolha tem três motivos:
+O ambiente roda **inteiramente em uma única máquina física** (host Linux Mint), com Docker. Os motivos dessa escolha:
 
 - o ambiente sobe em segundos e é idêntico para todos os integrantes;
-- nenhuma porta dos contêineres é publicada no host (`ports:` não é usado), portanto nenhum serviço do laboratório fica acessível a conexões vindas de fora do host;
-- toda a configuração está em código (`Dockerfile` e `docker-compose.yml`), o que permite revisá-la e versioná-la.
+- nenhuma porta dos contêineres é publicada no host (`ports:` não é usado), então nenhum serviço do laboratório fica acessível a conexões vindas de fora do host;
+- toda a configuração está em código (`Dockerfile`, `docker-compose.yml` e arquivos de `hardening/`), o que permite revisá-la e versioná-la.
 
-> **Atenção: isso não significa isolamento de saída.** As redes usam `driver: bridge` comum e **não** declaram `internal: true`. Nesse modo, o Docker normalmente permite que os contêineres iniciem conexões para fora através do host, usando NAT (*masquerade*). O bloqueio do tráfego de saída **não foi configurado nem comprovado** nesta etapa (veja a [seção 17](#17-limitações-e-considerações-técnicas)).
+> **Atenção: isso não significa isolamento de saída.** As redes usam `driver: bridge` comum e **não** declaram `internal: true`. Nesse modo, o Docker normalmente permite que os contêineres iniciem conexões para fora através do host, usando NAT (*masquerade*). O bloqueio do tráfego de saída **não foi configurado nem comprovado** (veja a [seção 8](#8-configuração-das-redes-docker)).
 
-> **Importante: isto não é uma máquina virtual.** Os contêineres Docker **compartilham o kernel Linux do host**. O contêiner "Ubuntu" tem o *espaço de usuário* do Ubuntu 24.04 (bibliotecas, `apt`, `iproute2`, `openssh-server`), mas o kernel, e com ele a pilha TCP/IP, é o do host. Cada contêiner tem seu próprio **namespace de rede**: interfaces, rotas, tabela ARP e parâmetros `net.*` isolados. Isso basta para simular roteamento, mas **não é um Ubuntu Server completo**. Não há `systemd`, não há boot próprio, não há Netplan e não existe um kernel separado.
+> **Importante: isto não é uma máquina virtual.** Os contêineres Docker **compartilham o kernel Linux do host**. O contêiner "Ubuntu" tem o *espaço de usuário* do Ubuntu 24.04 (bibliotecas, `apt`, `iproute2`, `openssh-server`), mas o kernel, e com ele a pilha TCP/IP, é o do host. Cada contêiner tem seu próprio **namespace de rede**: interfaces, rotas, tabela ARP e parâmetros `net.*` isolados. Isso basta para simular roteamento e um serviço SSH, mas **não é um Ubuntu Server completo**. Não há `systemd`, não há boot próprio, não há Netplan e não existe um kernel separado. Por isso, todo hardening descrito aqui vale **para o contêiner**, e **não** para o host Linux Mint.
 
 ## 3. Tecnologias utilizadas
 
@@ -64,33 +69,39 @@ O ambiente roda **inteiramente em uma única máquina física**, com Docker. A e
 | Kernel Linux do host | 7.0.0-43-generic | Pilha de rede compartilhada por todos os contêineres |
 | Ubuntu | 24.04.5 LTS (Noble Numbat) | Espaço de usuário do roteador |
 | Alpine Linux | 3.22 | Clientes LAN e WAN (imagem mínima, ferramentas BusyBox) |
-| `iproute2` | pacote do Ubuntu 24.04 | `ip addr`, `ip route`, `ip neigh`, `ss` no roteador |
-| `iputils-ping` | pacote do Ubuntu 24.04 | `ping` no roteador |
-| `openssh-server` | pacote do Ubuntu 24.04 | Servidor SSH do roteador (ainda **sem** hardening) |
-| BusyBox (`ip`, `ping`, `traceroute`) | 1.37.0 | Ferramentas de rede nos clientes Alpine |
+| OpenSSH (servidor no roteador) | 9.6p1 (`1:9.6p1-3ubuntu13.20`) | Acesso administrativo ao roteador |
+| OpenSSH (cliente no host) | 9.6p1 | Testes de autenticação |
+| `iproute2` | 6.1.0 | `ip addr`, `ip route`, `ip neigh`, `ss` no roteador |
+| `iputils-ping` | 20240117 | `ping` no roteador |
+| BusyBox (`ip`, `ping`, `traceroute`, `nc`) | 1.37.0 | Ferramentas de rede nos clientes Alpine |
 
 ## 4. Arquitetura da infraestrutura
 
-Estrutura do repositório (arquivos relevantes para esta etapa):
+Estrutura desta parte do repositório:
 
 ```text
-Rotier/
-├── README.md                          ← este documento
-└── shozz-infra-lab/
-    ├── infraestrutura/
-    │   ├── Dockerfile                 ← imagem do roteador Ubuntu 24.04
-    │   └── docker-compose.yml         ← contêineres, redes e endereçamento
-    ├── hardening/                     ← (vazio) reservado para a etapa de hardening
-    └── evidencias/
-        └── infraestrutura/
-            ├── testes-rede.md         ← registro detalhado dos testes
-            └── saidas/                ← saídas brutas dos comandos (00 a 16)
+shozz-infra-lab/
+├── README.md                              ← este documento
+├── .dockerignore                          ← limita o contexto de build ao necessário
+├── infraestrutura/
+│   ├── Dockerfile                         ← imagem do roteador Ubuntu 24.04 (com hardening)
+│   └── docker-compose.yml                 ← contêineres, redes e endereçamento
+├── hardening/
+│   ├── entrypoint.sh                      ← gera chaves de host, valida e inicia o sshd
+│   ├── ssh/
+│   │   ├── 10-shozz-hardening.conf        ← configuração endurecida do OpenSSH
+│   │   └── authorized_keys                ← chave PÚBLICA autorizada do usuário ubuntu
+│   └── backup/                            ← cópias anteriores ao hardening
+└── evidencias/
+    └── infraestrutura/
+        ├── testes-rede.md                 ← registro detalhado das auditorias e testes
+        └── saidas/                        ← saídas brutas dos comandos (00 a 39)
 ```
 
 A arquitetura tem três elementos:
 
 1. **Duas redes Docker do tipo *bridge*** (`shozz_lan` e `shozz_wan`). Cada uma funciona como um switch virtual no host.
-2. **Um roteador Ubuntu**, ligado às duas redes, com `ip_forward` ativo.
+2. **Um roteador Ubuntu**, ligado às duas redes, com `ip_forward` ativo e o SSH endurecido na porta 2222.
 3. **Dois clientes Alpine**, cada um ligado a apenas uma rede, com uma rota estática que aponta para o roteador.
 
 ## 5. Diagrama da topologia
@@ -107,7 +118,7 @@ flowchart LR
         GW(["Gateway Docker WAN<br/>bridge do host<br/>10.20.20.254"])
     end
 
-    R{{"shozz-ubuntu-router<br/>Ubuntu 24.04<br/>ip_forward = 1<br/>eth1: 10.10.10.1/24 (LAN)<br/>eth0: 10.20.20.1/24 (WAN)"}}
+    R{{"shozz-ubuntu-router<br/>Ubuntu 24.04<br/>ip_forward = 1<br/>SSH: 2222/tcp (só chave)<br/>eth1: 10.10.10.1/24 (LAN)<br/>eth0: 10.20.20.1/24 (WAN)"}}
 
     CL -- "rota estática<br/>10.20.20.0/24 via 10.10.10.1" --> R
     CW -- "rota estática<br/>10.10.10.0/24 via 10.20.20.1" --> R
@@ -117,11 +128,11 @@ flowchart LR
     CW -. "gateway padrão" .-> GW
 ```
 
-As linhas cheias mostram o caminho real do tráfego entre as sub-redes. As linhas tracejadas mostram o gateway padrão de cada cliente, que é a bridge do host Docker e **não** participa da comunicação LAN ↔ WAN.
+As linhas cheias mostram o caminho real do tráfego entre as sub-redes. As linhas tracejadas mostram o gateway padrão de cada cliente, que é a bridge do host Docker e **não** participa da comunicação LAN ↔ WAN. O próprio host, por estar ligado às duas bridges (`.254`), alcança o SSH do roteador sem nenhuma porta publicada.
 
 ## 6. Tabela de endereçamento IP
 
-| Equipamento | Rede Docker | Interface | Endereço | Confirmado na auditoria |
+| Equipamento | Rede Docker | Interface | Endereço | Confirmado |
 |---|---|---|---|---|
 | Ubuntu (roteador) — LAN | `shozz_lan` | `eth1` | `10.10.10.1/24` | ✅ |
 | Ubuntu (roteador) — WAN | `shozz_wan` | `eth0` | `10.20.20.1/24` | ✅ |
@@ -132,7 +143,7 @@ As linhas cheias mostram o caminho real do tráfego entre as sub-redes. As linha
 
 > O `docker-compose.yml` define **explicitamente** o gateway de cada rede Docker: `10.10.10.254` na LAN e `10.20.20.254` na WAN. Com o gateway do IPAM fixado em `.254`, os endereços `.1` ficam livres e podem ser atribuídos ao roteador Ubuntu.
 >
-> Os nomes `eth0` e `eth1` do roteador dependem da ordem em que o Docker conecta as redes. Para identificar uma interface, use o **endereço IP** e não o nome.
+> Os nomes `eth0` e `eth1` do roteador dependem da ordem em que o Docker conecta as redes. Eles se mantiveram depois da recriação do roteador em 2026-11-24 ([`28`](evidencias/infraestrutura/saidas/28-final-interfaces-rotas-forward.txt)), mas isso não é garantido. Para identificar uma interface, use o **endereço IP**.
 
 ## 7. Os três contêineres
 
@@ -140,13 +151,14 @@ As linhas cheias mostram o caminho real do tráfego entre as sub-redes. As linha
 
 | Item | Configuração |
 |---|---|
-| Imagem | construída a partir de `infraestrutura/Dockerfile` (base `ubuntu:24.04`) |
+| Imagem | construída a partir de [`infraestrutura/Dockerfile`](infraestrutura/Dockerfile) (base `ubuntu:24.04`, contexto de build `shozz-infra-lab/`) |
 | Hostname | `ubuntu-router` |
 | Redes | `shozz_lan` (10.10.10.1) e `shozz_wan` (10.20.20.1) |
 | Capacidade extra | `NET_ADMIN`, que permite administrar interfaces e rotas no próprio namespace |
 | `sysctls` | `net.ipv4.ip_forward: "1"` |
-| Processo principal | `/usr/sbin/sshd -D -e` (SSH em primeiro plano, com log na saída padrão) |
-| Pacotes | `iproute2`, `iputils-ping`, `openssh-server`, `sudo`, `ca-certificates` |
+| Processo principal | [`hardening/entrypoint.sh`](hardening/entrypoint.sh) → `ssh-keygen -A`, `sshd -t` e `exec sshd -D -e` (o sshd vira o PID 1) |
+| Serviço exposto | SSH em `2222/tcp`, sem publicação no host |
+| Pacotes explícitos | `iproute2`, `iputils-ping`, `openssh-server`, `sudo`, `ca-certificates` |
 
 ### `shozz-cliente-lan` — cliente da LAN
 
@@ -199,11 +211,22 @@ networks:
 
 | Aspecto | Situação atual | Base |
 |---|---|---|
-| Separação entre LAN e WAN | São duas bridges distintas. Cada cliente está ligado a apenas uma delas, e o único contêiner presente nas duas é o roteador. | `docker network inspect` ([`02`](shozz-infra-lab/evidencias/infraestrutura/saidas/02-redes-docker.txt)) |
-| Conexões de **entrada** vindas de fora do host | Não há portas publicadas (`ports:` ausente; `docker port` vazio). Nenhum serviço dos contêineres é exposto em interfaces externas do host. | [`15`](shozz-infra-lab/evidencias/infraestrutura/saidas/15-estado-ssh-atual.txt), [`16`](shozz-infra-lab/evidencias/infraestrutura/saidas/16-verificacoes-complementares.txt) |
-| Conexões de **saída** dos contêineres | **Não bloqueadas por configuração.** As redes não são `internal` (`internal=false`). Em redes bridge comuns, o Docker normalmente aplica NAT (*masquerade*) no host, o que permite que os contêineres alcancem redes externas pelo gateway `.254`. | [`16`](shozz-infra-lab/evidencias/infraestrutura/saidas/16-verificacoes-complementares.txt) |
+| Separação entre LAN e WAN | São duas bridges distintas. Cada cliente está ligado a apenas uma delas, e o único contêiner presente nas duas é o roteador. | [`02`](evidencias/infraestrutura/saidas/02-redes-docker.txt), [`27`](evidencias/infraestrutura/saidas/27-final-estado-conteineres-redes.txt) |
+| Conexões de **entrada** vindas de fora do host | Não há portas publicadas (`ports:` ausente; `docker port` vazio). O SSH (2222) só é alcançável a partir do próprio host e das redes do laboratório. | [`27`](evidencias/infraestrutura/saidas/27-final-estado-conteineres-redes.txt) |
+| Conexões de **saída** dos contêineres | **Não bloqueadas por configuração.** As redes não são `internal` (`internal=false`). Em redes bridge comuns, o Docker normalmente aplica NAT (*masquerade*) no host, o que permite que os contêineres alcancem redes externas pelo gateway `.254`. | [`16`](evidencias/infraestrutura/saidas/16-verificacoes-complementares.txt), [`27`](evidencias/infraestrutura/saidas/27-final-estado-conteineres-redes.txt) |
 
-**Não publicar portas** impede que alguém de fora **inicie** conexões com os contêineres. Isso não impede que os contêineres **iniciem** conexões para fora. São controles diferentes. O isolamento de saída exigiria, por exemplo, `internal: true` nas redes ou regras de firewall, e **nenhum dos dois foi aplicado nesta etapa**. As regras de NAT do host não foram inspecionadas, e nenhum teste de saída para a Internet foi feito. Por isso, o comportamento de saída está descrito como o padrão do Docker, e **não como algo comprovado**.
+**Não publicar portas** impede que alguém de fora **inicie** conexões com os contêineres. Isso não impede que os contêineres **iniciem** conexões para fora. São controles diferentes. As regras de NAT do host não foram inspecionadas, e nenhum teste de saída para a Internet foi feito. Por isso, o comportamento de saída está descrito como o padrão do Docker, e **não como algo comprovado**.
+
+### Análise de `internal: true` (decisão: adiado)
+
+| Efeito esperado de `internal: true` | Consequência no laboratório |
+|---|---|
+| O Docker deixa de fazer NAT de saída para essas redes | Bloqueio de saída para redes externas (o objetivo) |
+| Os contêineres deixam de receber rota padrão para o gateway `.254` | Os clientes ficam só com a rede local e a rota estática para o roteador. O roteamento LAN ↔ WAN acontece dentro do namespace do roteador e não depende do host, então deve continuar funcionando, **mas isso precisa ser testado** |
+| Sem acesso à Internet em tempo de execução | `apt`/`apk` deixam de funcionar dentro dos contêineres. Ferramentas como Nmap teriam de vir já na imagem, o que **afeta o trabalho de outros integrantes** |
+| Exige recriar as duas redes e os três contêineres | Interrupção de todo o laboratório |
+
+O acesso do host ao SSH (via `.254`) também precisaria ser revalidado, porque o tratamento do gateway em redes internas pode variar entre versões do Docker. **Decisão desta etapa:** não aplicar. A mudança deve ser combinada com os integrantes responsáveis por firewall e testes e, se adotada, comprovada com testes de roteamento, de SSH e de bloqueio de saída. Este documento **não** afirma que existe isolamento de saída.
 
 ## 9. Funcionamento do roteador Ubuntu
 
@@ -236,25 +259,25 @@ Por padrão, um host Linux **descarta** pacotes cujo destino não é ele mesmo. 
 | `0` | Host comum: só aceita pacotes destinados a ele |
 | `1` | Roteador: encaminha pacotes entre interfaces de acordo com a tabela de rotas |
 
-Neste laboratório o parâmetro é definido no Compose:
+Neste laboratório, o parâmetro é definido no Compose:
 
 ```yaml
 sysctls:
   net.ipv4.ip_forward: "1"
 ```
 
-Essa opção do Compose atua **apenas no namespace de rede do contêiner roteador** e garante o valor `1` ali, independentemente de qualquer outro fator. Para verificar:
+Essa opção do Compose atua **apenas no namespace de rede do contêiner roteador** e garante ali o valor `1`, independentemente de qualquer outro fator. Para verificar:
 
 ```bash
 docker exec shozz-ubuntu-router sysctl net.ipv4.ip_forward
 # net.ipv4.ip_forward = 1
 ```
 
-> **Observação verificada na revisão** ([`16-verificacoes-complementares.txt`](shozz-infra-lab/evidencias/infraestrutura/saidas/16-verificacoes-complementares.txt)): o host e os dois clientes **também** apresentam `ip_forward = 1`. O Compose não define esse valor para os clientes. No host, o próprio Docker habilita o encaminhamento para operar as redes bridge, e neste ambiente os namespaces dos clientes ficaram com o mesmo valor. Isso não transforma os clientes em roteadores: cada um tem **uma única interface** e não recebe tráfego de outra sub-rede para repassar. O papel de roteador entre LAN e WAN é do contêiner Ubuntu, como mostram o `traceroute` e o contador `ForwDatagrams` ([seção 15](#15-resultados-reais-dos-testes)).
+> **Observação** ([`16`](evidencias/infraestrutura/saidas/16-verificacoes-complementares.txt)): o host e os dois clientes **também** apresentam `ip_forward = 1`. O Compose não define esse valor para os clientes. No host, o próprio Docker habilita o encaminhamento para operar as redes bridge, e neste ambiente os namespaces dos clientes ficaram com o mesmo valor. Isso não transforma os clientes em roteadores: cada um tem **uma única interface** e não recebe tráfego de outra sub-rede para repassar. O papel de roteador entre LAN e WAN é do contêiner Ubuntu, como mostram o `traceroute` e o contador `ForwDatagrams` ([seção 17](#17-resultados-reais-dos-testes)).
 
 ## 11. Rotas: diretamente conectadas, estáticas e gateway padrão
 
-Tabelas obtidas na auditoria de 2026-11-23:
+Tabelas confirmadas no estado final (2026-11-24, [`28`](evidencias/infraestrutura/saidas/28-final-interfaces-rotas-forward.txt)), idênticas às da primeira auditoria:
 
 ```text
 # Roteador
@@ -284,14 +307,14 @@ Cada cliente conhece de forma direta apenas a própria sub-rede. Para alcançar 
 - cliente LAN: `10.20.20.0/24 via 10.10.10.1`, ou seja, "para chegar à WAN, entregue ao roteador";
 - cliente WAN: `10.10.10.0/24 via 10.20.20.1`, ou seja, "para chegar à LAN, entregue ao roteador".
 
-Essas rotas são criadas pelo `command` de cada contêiner (`ip route replace ...`) sempre que ele inicia. O próximo salto precisa estar na sub-rede local do cliente, e isso é verdade aqui.
+Essas rotas são criadas pelo `command` de cada contêiner (`ip route replace ...`) sempre que ele inicia. O próximo salto precisa estar na sub-rede local do cliente, e isso é verdade aqui. Como apontam para o **endereço IP** do roteador, as rotas continuaram válidas quando só o roteador foi recriado.
 
 ### Gateway padrão
 
 A rota `default` é usada **quando nenhuma rota mais específica corresponde ao destino**. O kernel sempre escolhe o prefixo mais longo (*longest prefix match*): um `/24` vence o `/0` da rota padrão.
 
 - Nos clientes, o gateway padrão é a bridge do host Docker (`.254`). Destinos como a Internet seguiriam por ele, mas a rede oposta do laboratório **não**, porque a rota estática `/24` é mais específica.
-- No roteador, a rota padrão é `via 10.10.10.254 dev eth1`. O Docker a escolheu pela rede LAN. Em uma rede real a rota padrão normalmente apontaria para a WAN, mas aqui a "WAN" é só uma segunda sub-rede interna e não dá saída para a Internet. Isso não afeta o roteamento entre LAN e WAN.
+- No roteador, a rota padrão é `via 10.10.10.254 dev eth1`, escolhida pelo Docker pela rede LAN. Em uma rede real, a rota padrão normalmente apontaria para a WAN. Aqui, a "WAN" é só uma segunda sub-rede interna, sem saída própria para a Internet. Isso não afeta o roteamento entre LAN e WAN.
 
 | Tipo | Onde aparece | Como surge | Tem `via`? | Exemplo |
 |---|---|---|---|---|
@@ -299,11 +322,100 @@ A rota `default` é usada **quando nenhuma rota mais específica corresponde ao 
 | Estática | Clientes | Manualmente (`ip route replace`) | Sim | `10.20.20.0/24 via 10.10.10.1` |
 | Gateway padrão | Todos | Atribuída pelo Docker (gateway do IPAM) | Sim | `default via 10.10.10.254` |
 
-## 12. Procedimentos de inicialização
+## 12. Configuração do SSH
+
+### 12.1 Estado inicial e estado final
+
+| Item | Inicial ([`15`](evidencias/infraestrutura/saidas/15-estado-ssh-atual.txt)) | Final, efetivo pelo `sshd -T` ([`32`](evidencias/infraestrutura/saidas/32-final-ssh-configuracao-efetiva.txt)) |
+|---|---|---|
+| Porta | 22 (com `EXPOSE 2222` divergente) | **2222**, coerente com o `EXPOSE 2222` |
+| Família de endereços | IPv4 e IPv6 | `inet` (só IPv4, como o laboratório) |
+| Login de root | `without-password` (root entrava com chave) | **`no`** |
+| Usuários permitidos | qualquer um | **`AllowUsers ubuntu`** |
+| Métodos de autenticação | `publickey` e `password` | **somente `publickey`** (`AuthenticationMethods publickey`) |
+| `PasswordAuthentication` | `yes` | **`no`** |
+| `KbdInteractiveAuthentication` | `no` | `no` |
+| `MaxAuthTries` / `LoginGraceTime` | 6 / 120 s | **3 / 30 s** |
+| `X11Forwarding` / `AllowTcpForwarding` / `AllowAgentForwarding` | `yes` / `yes` / `yes` | **`no` / `no` / `no`** |
+| `PermitTunnel` | `no` | `no` |
+| Banner de versão | `OpenSSH_9.6p1 Ubuntu-3ubuntu13.20` | `OpenSSH_9.6p1` (`DebianBanner no`) |
+| `LogLevel` | `INFO` | **`VERBOSE`** (registra a impressão digital da chave usada) |
+| Criptografia | inclui `hmac-sha1`, `umac-64`, `ecdh-nistp*` e `diffie-hellman-*` | somente KEX `sntrup761`/`curve25519`, cifras AEAD/CTR e MACs `-etm` SHA-2/UMAC-128 |
+| Chaves de host | **geradas no build e embutidas na imagem** (`root@buildkitsandbox`) | **geradas na inicialização de cada contêiner** (`root@ubuntu-router`) |
+
+### 12.2 Onde a configuração fica
+
+- [`hardening/ssh/10-shozz-hardening.conf`](hardening/ssh/10-shozz-hardening.conf) é copiado para `/etc/ssh/sshd_config.d/`. O `sshd_config` padrão do Ubuntu inclui esse diretório **na primeira linha útil**, e no OpenSSH vale o **primeiro** valor lido de cada opção. Por isso o arquivo tem precedência sobre o restante, e o `sshd_config` original ficou intacto.
+- [`hardening/ssh/authorized_keys`](hardening/ssh/authorized_keys) contém **apenas a chave pública** do laboratório (ED25519, `SHA256:0dJzpy9uBimbUqnwJLu1SQ2j88lYB3HVJC7wYeF+MuQ`). A chave privada fica só no host do responsável (`~/.ssh/shozz_lab_ed25519`) e **não** está no repositório.
+- [`hardening/entrypoint.sh`](hardening/entrypoint.sh) gera as chaves de host (`ssh-keygen -A`), executa `sshd -t` (o contêiner não sobe com configuração inválida) e inicia o `sshd` em primeiro plano.
+
+### 12.3 Escolha do usuário
+
+O `AllowUsers` usa **`ubuntu`** (UID 1000), o único usuário comum que **já existe** na imagem oficial `ubuntu:24.04`. Nenhum usuário novo foi inventado. Sobre os privilégios dele:
+
+- a senha está **bloqueada** (`passwd -S` → `L`), então ele não autentica por senha em nenhum serviço;
+- ele pertence ao grupo `sudo` (padrão da imagem). Como não tem senha, `sudo -n true` responde `a password is required` ([`39`](evidencias/infraestrutura/saidas/39-final-hardening.txt)) e, **na prática, não consegue elevar privilégios**. Por decisão do responsável, o grupo foi mantido nesta etapa;
+- a administração como root continua disponível pelo host com `docker exec`, que é o canal de administração do laboratório. O servidor nunca fica sem forma de administração.
+
+### 12.4 Como o SSH é acessado
+
+Não foi necessário publicar a porta (`2222:2222`). O host está ligado às duas bridges (`10.10.10.254` e `10.20.20.254`) e alcança o roteador diretamente. Publicar a porta exporia o SSH em todas as interfaces do host, inclusive na rede física, o que é desnecessário e aumentaria a superfície de ataque.
+
+```bash
+ssh -i ~/.ssh/shozz_lab_ed25519 -o IdentitiesOnly=yes \
+    -o UserKnownHostsFile=~/.ssh/shozz_lab_known_hosts \
+    -p 2222 ubuntu@10.10.10.1
+```
+
+Antes de aceitar a chave de host na primeira conexão, confira a impressão digital por um canal confiável:
+
+```bash
+docker exec shozz-ubuntu-router ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub
+```
+
+> As chaves de host são geradas **por contêiner**. Depois de recriar o roteador, a impressão digital muda e a entrada antiga do `known_hosts` precisa ser removida (`ssh-keygen -R '[10.10.10.1]:2222' -f ~/.ssh/shozz_lab_known_hosts`). Um simples reinício do mesmo contêiner mantém as chaves.
+
+### 12.5 Procedimento seguro adotado
+
+Para não perder o acesso administrativo, a configuração foi aplicada em etapas:
+
+1. **Backup** do `Dockerfile`, do `docker-compose.yml`, do `sshd_config` original e do `sshd -T` inicial em [`hardening/backup/`](hardening/backup/) (e também em `/root/backup-ssh` no contêiner antigo).
+2. **Etapa 1**: configuração aplicada no contêiner em execução **com a senha ainda habilitada**, validada com `sshd -t` e servida por uma **segunda instância** do `sshd` na porta 2222, enquanto a instância original continuava na 22 ([`17`](evidencias/infraestrutura/saidas/17-ssh-etapa1-validacao.txt)). Login por chave confirmado ([`18`](evidencias/infraestrutura/saidas/18-ssh-etapa1-chave-ok.txt)).
+3. **Etapa 2**: só depois disso foram aplicados `PasswordAuthentication no` e `AuthenticationMethods publickey`, validados com `sshd -t` e recarregados na instância de teste ([`19`](evidencias/infraestrutura/saidas/19-ssh-etapa2-validacao.txt)). Testes de chave, senha, root e alcance: [`20`](evidencias/infraestrutura/saidas/20-ssh-teste-chave.txt) a [`25`](evidencias/infraestrutura/saidas/25-ssh-log-servidor.txt).
+4. **Persistência**: a configuração foi levada para a imagem (`Dockerfile`), a imagem foi construída e **somente o roteador** foi recriado (`docker compose up -d --no-deps ubuntu-router`), com autorização. Os clientes e as redes não foram tocados.
+5. **Testes finais** na configuração definitiva: [`27`](evidencias/infraestrutura/saidas/27-final-estado-conteineres-redes.txt) a [`39`](evidencias/infraestrutura/saidas/39-final-hardening.txt).
+
+## 13. Hardening aplicado
+
+> **Escopo:** todas as medidas abaixo foram aplicadas **dentro do contêiner `shozz-ubuntu-router`** (na imagem). **Nenhuma** alteração de hardening foi feita no host Linux Mint, e este documento **não** afirma que o host foi protegido. Como o kernel é compartilhado, parâmetros de kernel e módulos do host estão fora do alcance do contêiner.
+
+| Medida | Situação | Evidência |
+|---|---|---|
+| Atualizações de segurança | `apt-get upgrade` no build. Antes havia 4 pacotes pendentes (`libc6`, `libc-bin`, `libsystemd0`, `libudev1`); depois, **0** | [`26`](evidencias/infraestrutura/saidas/26-hardening-analise-inicial.txt), [`39`](evidencias/infraestrutura/saidas/39-final-hardening.txt) |
+| SSH endurecido | Ver [seção 12](#12-configuração-do-ssh) | [`32`](evidencias/infraestrutura/saidas/32-final-ssh-configuracao-efetiva.txt) a [`38`](evidencias/infraestrutura/saidas/38-final-ssh-log-servidor.txt) |
+| Chaves de host exclusivas | Removidas da imagem e geradas na inicialização de cada contêiner | [`32`](evidencias/infraestrutura/saidas/32-final-ssh-configuracao-efetiva.txt) |
+| Configuração validada antes de iniciar | `sshd -t` no `entrypoint.sh` | [`hardening/entrypoint.sh`](hardening/entrypoint.sh) |
+| Permissões de arquivos SSH | `sshd_config` e `10-shozz-hardening.conf` com `600 root:root`; chaves privadas de host com `600`; `~ubuntu/.ssh` com `700`; `authorized_keys` com `600` | [`39`](evidencias/infraestrutura/saidas/39-final-hardening.txt) |
+| Arquivos de contas | `/etc/shadow` e `/etc/gshadow` com `640 root:shadow`; `/etc/sudoers` com `440` (padrão correto, conferido) | [`39`](evidencias/infraestrutura/saidas/39-final-hardening.txt) |
+| Contas | Só `root` tem UID 0; `root` e `ubuntu` com senha bloqueada; nenhuma senha vazia | [`26`](evidencias/infraestrutura/saidas/26-hardening-analise-inicial.txt), [`39`](evidencias/infraestrutura/saidas/39-final-hardening.txt) |
+| Serviços | Só um processo: o `sshd` (PID 1). Não há `systemd`, cron nem outros daemons | [`39`](evidencias/infraestrutura/saidas/39-final-hardening.txt) |
+| Pacotes | 118 pacotes; os 5 explícitos foram analisados e todos têm função (rede, SSH e certificados; `sudo` mantido por decisão do responsável). Nenhum pacote foi removido | [`26`](evidencias/infraestrutura/saidas/26-hardening-analise-inicial.txt) |
+| Contexto de build mínimo | [`.dockerignore`](.dockerignore) envia ao build só os 3 arquivos copiados | — |
+
+**Recomendações não aplicadas nesta etapa** (registradas para decisão futura):
+
+- remover o `ubuntu` dos grupos `sudo` e `adm` e o pacote `sudo`, administrando só via `docker exec`;
+- remover o bit SUID de binários sem uso no laboratório (`ssh-keysign`, `chfn`, `chsh`);
+- restringir as capacidades do contêiner (`cap_drop`) e usar `security_opt: no-new-privileges`, depois de testar a compatibilidade com o `sshd`;
+- limitar a origem do SSH (por exemplo, `AllowUsers ubuntu@10.10.10.0/24`) ou filtrar por firewall. A filtragem por firewall é responsabilidade do integrante de segurança de rede.
+
+## 14. Procedimentos de inicialização
 
 Pré-requisitos: Docker Engine e o plugin Docker Compose instalados no host Linux.
 
-> **Nome do projeto:** o `docker-compose.yml` declara `name: shozz-infra-lab` na primeira linha. Por isso os comandos `docker compose` executados em `shozz-infra-lab/infraestrutura/` encontram o projeto sem precisar de `-p`. Esse nome é o mesmo com que o ambiente em execução foi criado (antes, por meio de `-p shozz-infra-lab`). A opção `-p shozz-infra-lab` continua válida e equivalente.
+> **Nome do projeto:** o `docker-compose.yml` declara `name: shozz-infra-lab` na primeira linha, então os comandos `docker compose` executados em `shozz-infra-lab/infraestrutura/` encontram o projeto sem `-p`.
+>
+> **Contexto de build:** o roteador é construído com `context: ..` (a pasta `shozz-infra-lab/`), porque o `Dockerfile` copia arquivos de `hardening/`.
 
 ```bash
 cd shozz-infra-lab/infraestrutura
@@ -318,7 +430,14 @@ docker compose up -d --build
 docker compose ps
 ```
 
-Saída esperada: os três serviços (`ubuntu-router`, `cliente-lan`, `cliente-wan`) com status `Up`.
+Saída esperada: os três serviços (`ubuntu-router`, `cliente-lan`, `cliente-wan`) com status `Up` e o roteador mostrando `2222/tcp`.
+
+Para aplicar mudanças da imagem **somente no roteador**, sem tocar nos clientes:
+
+```bash
+docker compose build ubuntu-router
+docker compose up -d --no-deps ubuntu-router
+```
 
 Para parar e remover o laboratório (apaga os contêineres e as redes; use somente quando for necessário):
 
@@ -326,7 +445,7 @@ Para parar e remover o laboratório (apaga os contêineres e as redes; use somen
 docker compose down
 ```
 
-## 13. Comandos úteis de administração
+## 15. Comandos úteis de administração
 
 Execute os comandos `docker compose` a partir de `shozz-infra-lab/infraestrutura/`. Os comandos `docker exec` e `docker network` funcionam de qualquer diretório.
 
@@ -334,12 +453,20 @@ Execute os comandos `docker compose` a partir de `shozz-infra-lab/infraestrutura
 # Estado
 docker compose ps
 docker network inspect shozz_lan shozz_wan
-docker compose logs ubuntu-router
+docker compose logs ubuntu-router            # inclui o log do sshd (LogLevel VERBOSE)
 
-# Shell interativo
+# Administração como root (canal administrativo do laboratório)
 docker exec -it shozz-ubuntu-router bash
 docker exec -it shozz-cliente-lan sh
 docker exec -it shozz-cliente-wan sh
+
+# Acesso SSH (usuário comum, somente chave)
+ssh -i ~/.ssh/shozz_lab_ed25519 -o IdentitiesOnly=yes -p 2222 ubuntu@10.10.10.1
+
+# SSH: validação e configuração efetiva
+docker exec shozz-ubuntu-router sshd -t
+docker exec shozz-ubuntu-router sshd -T | grep -Ei '^(port|permitrootlogin|allowusers|passwordauthentication|authenticationmethods) '
+docker exec shozz-ubuntu-router ss -tlnp
 
 # Interfaces e endereços
 docker exec shozz-ubuntu-router ip -br addr
@@ -356,136 +483,134 @@ docker exec shozz-ubuntu-router sysctl net.ipv4.ip_forward
 # Conectividade e caminho
 docker exec shozz-cliente-lan ping -c 4 10.20.20.10
 docker exec shozz-cliente-lan traceroute -n 10.20.20.10
+docker exec shozz-cliente-lan nc -z -w 3 10.10.10.1 2222 && echo aberta
 
-# Tabela ARP (vizinhos)
+# Tabela ARP (vizinhos) e contador de encaminhamento
 docker exec shozz-ubuntu-router ip neigh
-
-# Contador de pacotes encaminhados pelo roteador
 docker exec shozz-ubuntu-router grep '^Ip:' /proc/net/snmp
-
-# Serviços escutando no roteador
-docker exec shozz-ubuntu-router ss -tlnp
 ```
 
-## 14. Testes executados
+## 16. Testes executados
 
-Na auditoria de **2026-11-23, entre 16:01:37 e 16:02:32 (UTC-03:00)**, foram executados apenas testes não destrutivos:
+Todos os testes foram não destrutivos: sem varreduras de portas, testes de carga ou alterações de firewall.
 
-| Categoria | Verificação | Ferramenta |
-|---|---|---|
-| Estado | Contêineres em execução | `docker compose ps`, `docker ps` |
-| Estado | Redes, sub-redes e gateways | `docker network inspect` |
-| Estado | Interfaces e endereços | `ip addr` |
-| Estado | Tabelas de rotas | `ip route` |
-| Estado | Encaminhamento IPv4 | `/proc/sys/net/ipv4/ip_forward`, `sysctl` |
-| Conectividade | T1 LAN → roteador, T2 WAN → roteador, T3 LAN → WAN, T4 WAN → LAN | `ping -c 4` |
-| Roteamento | Próximo salto escolhido pelo kernel do cliente | `ip route get` |
-| Roteamento | Caminho salto a salto | `traceroute -n -m 5` |
-| Roteamento | Saltos intermediários (TTL da resposta) | campo `ttl` do `ping` |
-| Roteamento | MAC do próximo salto | `ip neigh` |
-| Roteamento | Pacotes efetivamente encaminhados pelo roteador | `Ip: ForwDatagrams` em `/proc/net/snmp` |
-| Informativo | Estado atual do SSH (sem alterar nada) | `ss -tlnp`, `sshd -T` |
+| Rodada | Quando | O que foi testado | Evidências |
+|---|---|---|---|
+| 1. Auditoria da infraestrutura | 2026-11-23, 16:01–16:02 | Contêineres, redes, interfaces, rotas, `ip_forward`, ping T1–T4, `ip route get`, traceroute, ARP, `ForwDatagrams`, estado inicial do SSH | [`00`](evidencias/infraestrutura/saidas/00-docker-versao.txt)–[`15`](evidencias/infraestrutura/saidas/15-estado-ssh-atual.txt) |
+| 2. Verificações complementares | 2026-11-23, 16:13 | `ip_forward` do host e dos clientes, `internal` das redes, portas publicadas, `docker compose config` | [`16`](evidencias/infraestrutura/saidas/16-verificacoes-complementares.txt) |
+| 3. SSH em instância de teste | 2026-11-23, 23:57–23:58 | Etapa 1 (chave com senha ainda ativa), etapa 2 (só chave), senha, root, alcance pelos clientes, log | [`17`](evidencias/infraestrutura/saidas/17-ssh-etapa1-validacao.txt)–[`25`](evidencias/infraestrutura/saidas/25-ssh-log-servidor.txt) |
+| 4. Análise de hardening | 2026-11-23, 23:58 | Atualizações, pacotes, processos, contas, SUID, permissões, origem das chaves de host | [`26`](evidencias/infraestrutura/saidas/26-hardening-analise-inicial.txt) |
+| 5. Estado final (roteador recriado) | 2026-11-24, 00:08–00:09 | Repetição de todos os testes de rede e de SSH na configuração definitiva, mais o hardening | [`27`](evidencias/infraestrutura/saidas/27-final-estado-conteineres-redes.txt)–[`39`](evidencias/infraestrutura/saidas/39-final-hardening.txt) |
 
-Na revisão final (16:13:36), foi feita uma coleta complementar somente leitura: `ip_forward` do host e dos clientes, atributo `internal` das redes, portas publicadas e validação do Compose ([`16-verificacoes-complementares.txt`](shozz-infra-lab/evidencias/infraestrutura/saidas/16-verificacoes-complementares.txt)).
+## 17. Resultados reais dos testes
 
-Nenhuma configuração foi alterada para os testes passarem. Não foram feitas varreduras de portas, testes de carga nem alterações de firewall.
+### 17.1 Conectividade (estado final, [`29`](evidencias/infraestrutura/saidas/29-final-ping.txt))
 
-## 15. Resultados reais dos testes
-
-### Conectividade
-
-| # | Origem → Destino | Pacotes (env./rec.) | Perda | TTL da resposta | RTT médio | Resultado |
+| # | Origem → Destino | Pacotes (env./rec.) | Perda | TTL | RTT médio | Resultado |
 |---|---|---|---|---|---|---|
-| T1 | cliente-lan → 10.10.10.1 (roteador) | 4 / 4 | 0% | 64 | 0,240 ms | ✅ Aprovado |
-| T2 | cliente-wan → 10.20.20.1 (roteador) | 4 / 4 | 0% | 64 | 0,222 ms | ✅ Aprovado |
-| T3 | cliente-lan → 10.20.20.10 (cliente-wan) | 4 / 4 | 0% | **63** | 0,504 ms | ✅ Aprovado |
-| T4 | cliente-wan → 10.10.10.10 (cliente-lan) | 4 / 4 | 0% | **63** | 0,512 ms | ✅ Aprovado |
+| T1 | cliente-lan → 10.10.10.1 (roteador) | 4 / 4 | 0% | 64 | 0,709 ms | ✅ Aprovado |
+| T2 | cliente-wan → 10.20.20.1 (roteador) | 4 / 4 | 0% | 64 | 0,168 ms | ✅ Aprovado |
+| T3 | cliente-lan → 10.20.20.10 (cliente-wan) | 4 / 4 | 0% | **63** | 0,477 ms | ✅ Aprovado |
+| T4 | cliente-wan → 10.10.10.10 (cliente-lan) | 4 / 4 | 0% | **63** | 0,209 ms | ✅ Aprovado |
 
-### Roteamento: o tráfego atravessa o roteador?
+### 17.2 Roteamento: o tráfego atravessa o roteador?
 
-Quatro provas independentes indicam que **sim**:
+| Prova | 1ª auditoria (2026-11-23) | Estado final (2026-11-24) | Interpretação |
+|---|---|---|---|
+| `ip route get` | `via 10.10.10.1` / `via 10.20.20.1` | igual ([`30`](evidencias/infraestrutura/saidas/30-final-traceroute-route-get.txt)) | O próximo salto dos clientes é o roteador |
+| `traceroute` | 1º salto `10.10.10.1` / `10.20.20.1` | igual ([`30`](evidencias/infraestrutura/saidas/30-final-traceroute-route-get.txt)) | O roteador é o 1º salto nos dois sentidos |
+| TTL | 64 (roteador) / 63 (outro cliente) | igual ([`29`](evidencias/infraestrutura/saidas/29-final-ping.txt)) | Exatamente um roteador no caminho |
+| `ForwDatagrams` | 44 → 64 (**+20**), ping LAN→WAN | 28 → 48 (**+20**), ping WAN→LAN ([`31`](evidencias/infraestrutura/saidas/31-final-contador-encaminhamento.txt)) | 10 *requests* + 10 *replies* encaminhados pelo kernel do roteador, nos dois sentidos |
 
-| Prova | Resultado observado | Interpretação |
-|---|---|---|
-| `ip route get` | `10.20.20.10 via 10.10.10.1` / `10.10.10.10 via 10.20.20.1` | O kernel do cliente escolhe o roteador Ubuntu como próximo salto |
-| `traceroute` | LAN→WAN: `1 10.10.10.1`, `2 10.20.20.10`. WAN→LAN: `1 10.20.20.1`, `2 10.10.10.10` | O 1º salto é o roteador nos dois sentidos |
-| TTL | 64 ao pingar o roteador e 63 ao pingar o outro cliente | Exatamente um roteador no caminho |
-| `ForwDatagrams` | de 44 para 64 (**+20**) após `ping -c 10` LAN→WAN | 10 *requests* + 10 *replies* encaminhados pelo kernel do roteador |
+O contador recomeçou de um valor menor porque o roteador foi recriado.
 
-A tabela ARP também confirma o caminho: os clientes resolveram `10.10.10.1` e `10.20.20.1` para os MACs das interfaces `eth1` e `eth0` do roteador.
+### 17.3 SSH (estado final)
 
-### Comparação com o histórico
+| # | Teste | Resultado observado | Resultado |
+|---|---|---|---|
+| T-SSH1 | `ubuntu` com a chave, porta 2222, pela LAN e pela WAN | `Authenticated ... using "publickey"`, `LOGIN_OK`, `uid=1000(ubuntu)`; impressão digital do servidor igual à conferida via `docker exec` | ✅ Aprovado ([`33`](evidencias/infraestrutura/saidas/33-final-ssh-chave.txt)) |
+| T-SSH2 | Só senha/keyboard-interactive, sem chave | Servidor anuncia só `publickey` → `Permission denied (publickey)` | ✅ Senha não aceita ([`34`](evidencias/infraestrutura/saidas/34-final-ssh-senha-bloqueada.txt)) |
+| T-SSH3 | `root` com a chave do laboratório | `Permission denied (publickey)`; log: `User root ... not allowed because not listed in AllowUsers` | ✅ Root bloqueado ([`35`](evidencias/infraestrutura/saidas/35-final-ssh-root-bloqueado.txt), [`38`](evidencias/infraestrutura/saidas/38-final-ssh-log-servidor.txt)) |
+| T-SSH4 | Porta 22 | `Connection refused`; só a 2222 em escuta (`ss -tlnp`) | ✅ Porta antiga fechada ([`36`](evidencias/infraestrutura/saidas/36-final-ssh-porta-22-fechada.txt)) |
+| T-SSH5 | Alcance da 2222 a partir dos clientes | Aberta: LAN→10.10.10.1, WAN→10.20.20.1, LAN→10.20.20.1 (roteado) | ✅ Aprovado ([`37`](evidencias/infraestrutura/saidas/37-final-ssh-alcance-clientes.txt)) |
+| Config | `sshd -t` e `sshd -T` | Sem erros; valores da [seção 12.1](#121-estado-inicial-e-estado-final) | ✅ ([`32`](evidencias/infraestrutura/saidas/32-final-ssh-configuracao-efetiva.txt)) |
 
-Os resultados obtidos durante a implementação (interfaces, rotas, `ip_forward = 1` e pings T1–T4 com 4/4 e 0% de perda) foram **todos confirmados** nesta auditoria. Traceroute, análise de TTL e contador de encaminhamento são verificações **novas**, feitas pela primeira vez nesta auditoria.
+Os mesmos testes já haviam passado na instância de teste, antes da recriação ([`20`](evidencias/infraestrutura/saidas/20-ssh-teste-chave.txt)–[`25`](evidencias/infraestrutura/saidas/25-ssh-log-servidor.txt)).
 
-## 16. Evidências
+## 18. Evidências
 
-Todas as evidências estão em [`shozz-infra-lab/evidencias/infraestrutura/`](shozz-infra-lab/evidencias/infraestrutura/):
+Todas as evidências estão em [`evidencias/infraestrutura/`](evidencias/infraestrutura/):
 
-- [`testes-rede.md`](shozz-infra-lab/evidencias/infraestrutura/testes-rede.md): registro completo da auditoria, com data, comandos, resultados, inconsistências e conclusão técnica;
-- [`saidas/`](shozz-infra-lab/evidencias/infraestrutura/saidas/): saídas brutas, sem edição, de cada comando. Cada arquivo traz o horário da coleta, o comando exato e o código de saída.
+- [`testes-rede.md`](evidencias/infraestrutura/testes-rede.md): registro completo das auditorias, com datas, comandos, resultados, inconsistências e conclusões;
+- [`saidas/`](evidencias/infraestrutura/saidas/): saídas brutas de cada comando. Cada arquivo traz o horário da coleta, o comando exato e o código de saída. Elas não contêm senhas nem chaves privadas, apenas impressões digitais e chaves públicas.
 
 | Arquivo | Conteúdo |
 |---|---|
-| `00-docker-versao.txt` | Versões do Docker, do Compose e do kernel |
-| `01-conteineres.txt` | Estado dos contêineres |
-| `02-redes-docker.txt` | Sub-redes, gateways e membros das redes |
-| `03-interfaces-*.txt` | Interfaces e endereços de cada contêiner |
-| `04-rotas-*.txt` | Tabela de rotas de cada contêiner |
-| `05-ip-forward-router.txt` | Estado do encaminhamento IPv4 |
-| `06` a `09-ping-*.txt` | Testes de conectividade T1–T4 |
-| `10-route-get-clientes.txt` | Decisão de rota nos clientes |
-| `11`, `12-traceroute-*.txt` | Caminho salto a salto |
-| `13-vizinhos-arp.txt` | Tabelas ARP |
-| `14-contador-encaminhamento.txt` | Prova de encaminhamento pelo roteador |
-| `15-estado-ssh-atual.txt` | Estado **atual** do SSH (linha de base antes do hardening) |
-| `16-verificacoes-complementares.txt` | `ip_forward` do host e dos clientes, `internal` das redes, portas publicadas, `docker compose config` (revisão final) |
+| `00`–`15` | 1ª auditoria: versões, contêineres, redes, interfaces, rotas, `ip_forward`, ping, `route get`, traceroute, ARP, `ForwDatagrams`, SSH inicial |
+| `16-verificacoes-complementares.txt` | `ip_forward` do host e dos clientes, `internal`, portas publicadas, `docker compose config` |
+| `17-ssh-etapa1-validacao.txt` | Etapa 1: `sshd -t` e `sshd -T` com a senha ainda habilitada |
+| `18-ssh-etapa1-chave-ok.txt` | Etapa 1: login por chave confirmado antes de desativar a senha |
+| `19-ssh-etapa2-validacao.txt` | Etapa 2: configuração final validada e recarregada |
+| `20`–`24` | Instância de teste: chave, senha, root, porta 22 antiga, alcance pelos clientes |
+| `25-ssh-log-servidor.txt` | Log da instância de teste |
+| `26-hardening-analise-inicial.txt` | Análise antes do hardening da imagem |
+| `27`–`31` | Estado final da rede: contêineres, redes, interfaces, rotas, ping, traceroute, contador |
+| `32`–`38` | Estado final do SSH: configuração efetiva, chave, senha, root, porta 22, alcance, log |
+| `39-final-hardening.txt` | Estado final do hardening no contêiner |
 
-## 17. Limitações e considerações técnicas
+> Um ajuste de formatação: no commit `cb5bbac`, os espaços em branco no fim das linhas das saídas `01`, `03`, `04`, `10`, `13` e `15` foram removidos (para passar no `git diff --check`), sem alterar o conteúdo. As saídas `17`–`39` já foram gravadas sem esses espaços.
 
-- **Kernel compartilhado.** Os contêineres usam o kernel do host. O laboratório reproduz o comportamento de roteamento IP, mas não reproduz um servidor Ubuntu completo: não há `systemd`, gerenciamento de boot, Netplan nem módulos de kernel próprios.
-- **Endereçamento declarativo.** Endereços e redes são definidos pelo Docker Compose (IPAM), e não por ferramentas de configuração do Ubuntu. Mudar um IP significa alterar o `docker-compose.yml` e recriar o contêiner.
-- **Nomes de interface não garantidos.** Hoje temos `eth0` = WAN e `eth1` = LAN no roteador, mas essa ordem depende do Docker. Procedimentos e testes devem identificar as interfaces pelo IP.
-- **Rotas dos clientes.** São criadas pelo comando de inicialização do contêiner. Se o contêiner for recriado com outro comando, elas se perdem. Sem a rota estática, o tráfego seguiria pelo gateway padrão (o host Docker) e não pelo roteador.
-- **Gateway `.254` no host.** As bridges `shozz_lan` e `shozz_wan` têm endereço no host, que fica tecnicamente presente nas duas sub-redes. O caminho LAN ↔ WAN usado hoje é o roteador Ubuntu, como mostram a seção 15 e o contador `ForwDatagrams`.
-- **Isolamento de saída não configurado.** As redes são bridges comuns, sem `internal: true`. Não publicar portas impede conexões de entrada vindas de fora do host, mas não bloqueia conexões de saída. Por padrão, o Docker aplica NAT no host e os contêineres podem alcançar redes externas. Esse comportamento não foi testado nem bloqueado nesta etapa (veja a [seção 8](#8-configuração-das-redes-docker)).
-- **`ip_forward` em todos os namespaces.** O host e os clientes também apresentam `ip_forward = 1`. Os clientes não atuam como roteadores porque têm uma única interface (seção 10).
-- **Nome do projeto Compose.** O `docker-compose.yml` declara `name: shozz-infra-lab`, igual ao nome com que o ambiente em execução foi criado. O ambiente **não** foi recriado depois dessa alteração.
-- **`EXPOSE 2222` × porta real 22.** O Dockerfile declara `EXPOSE 2222`, mas o `sshd` ainda escuta na porta **22**, que é a configuração padrão. `EXPOSE` é apenas metadado e nenhuma porta está publicada no host. A correção pertence à etapa de SSH seguro.
-- **SSH sem hardening.** A configuração efetiva atual (`sshd -T`) é `port 22`, `permitrootlogin without-password`, `passwordauthentication yes`, sem `AllowUsers`. **Esse estado é inicial, não é o final.**
-- **Somente IPv4.** O roteamento IPv6 não foi configurado nem testado.
+## 19. Limitações e considerações técnicas
 
-## 18. Etapas futuras do projeto
+- **Kernel compartilhado.** Os contêineres usam o kernel do host. O laboratório reproduz o roteamento IP e o serviço SSH, mas não um servidor Ubuntu completo: não há `systemd`, gerenciamento de boot, Netplan nem módulos de kernel próprios. O hardening de kernel (`sysctl` globais, módulos, AppArmor do host) **não** pode ser feito de dentro do contêiner.
+- **Hardening só no contêiner.** Nada foi alterado no host Linux Mint, que **não** deve ser considerado protegido por este trabalho.
+- **Administração via `docker exec`.** Quem tem acesso ao Docker no host tem acesso root a todos os contêineres. As restrições do SSH protegem o acesso **pela rede**, não o acesso de quem já controla o host.
+- **Chaves de host por contêiner.** Cada recriação do roteador gera novas chaves de host, e o cliente SSH precisa conferir a nova impressão digital.
+- **Chave privada do laboratório sem senha.** A chave `~/.ssh/shozz_lab_ed25519` foi gerada sem *passphrase* para permitir testes automatizados. Em uso real, recomenda-se proteger a chave com uma (`ssh-keygen -p -f ~/.ssh/shozz_lab_ed25519`).
+- **Endereçamento declarativo.** Endereços e redes são definidos pelo Docker Compose (IPAM), e não por ferramentas do Ubuntu. Mudar um IP significa alterar o `docker-compose.yml` e recriar o contêiner.
+- **Nomes de interface não garantidos.** Hoje temos `eth0` = WAN e `eth1` = LAN no roteador, mas essa ordem depende do Docker.
+- **Rotas dos clientes.** São criadas pelo comando de inicialização do contêiner. Sem a rota estática, o tráfego seguiria pelo gateway padrão (o host Docker), e não pelo roteador.
+- **Gateway `.254` no host.** As bridges têm endereço no host, que fica tecnicamente presente nas duas sub-redes. O caminho LAN ↔ WAN usado é o roteador Ubuntu (seção 17).
+- **Isolamento de saída não configurado.** Ver [seção 8](#análise-de-internal-true-decisão-adiado).
+- **`ip_forward` em todos os namespaces.** O host e os clientes também apresentam `ip_forward = 1`. Os clientes não atuam como roteadores (seção 10).
+- **SSH acessível pela LAN e pela WAN.** O `sshd` escuta em todas as interfaces IPv4 do roteador. Restringir a origem por rede é uma recomendação (seção 13) ou tarefa de firewall.
+- **Imagem anterior.** O rebuild deixou a imagem antiga do roteador sem tag (`<none>`). Ela não foi apagada.
+- **Somente IPv4.** O roteamento IPv6 não foi configurado nem testado, e o SSH usa `AddressFamily inet`.
 
-As atividades abaixo **ainda não foram realizadas** e **não** devem ser consideradas concluídas:
+## 20. Itens concluídos e pendentes
 
-**SSH seguro e hardening do Ubuntu (responsabilidade desta frente):**
+### Concluídos (com evidência)
 
-- [ ] Configuração definitiva do `sshd_config`
-- [ ] Alteração da porta SSH (para 2222, em coerência com o `EXPOSE`) e validação
-- [ ] Bloqueio do login de `root` (`PermitRootLogin no`)
-- [ ] Restrição de usuários (`AllowUsers`)
-- [ ] Autenticação exclusivamente por chave SSH (`PasswordAuthentication no`)
-- [ ] Hardening do Ubuntu
-- [ ] Revisão de serviços e pacotes desnecessários
-- [ ] Revisão de permissões e atualizações
+- [x] Topologia LAN/WAN com duas redes bridge e endereçamento planejado ([`27`](evidencias/infraestrutura/saidas/27-final-estado-conteineres-redes.txt), [`28`](evidencias/infraestrutura/saidas/28-final-interfaces-rotas-forward.txt))
+- [x] Roteador Ubuntu com `ip_forward = 1` e roteamento LAN ↔ WAN comprovado ([`29`](evidencias/infraestrutura/saidas/29-final-ping.txt)–[`31`](evidencias/infraestrutura/saidas/31-final-contador-encaminhamento.txt))
+- [x] Rotas estáticas nos clientes ([`28`](evidencias/infraestrutura/saidas/28-final-interfaces-rotas-forward.txt))
+- [x] SSH na porta 2222, coerente com o `EXPOSE` ([`32`](evidencias/infraestrutura/saidas/32-final-ssh-configuracao-efetiva.txt), [`36`](evidencias/infraestrutura/saidas/36-final-ssh-porta-22-fechada.txt))
+- [x] `PermitRootLogin no`, com root bloqueado em teste real ([`35`](evidencias/infraestrutura/saidas/35-final-ssh-root-bloqueado.txt))
+- [x] `AllowUsers ubuntu` ([`32`](evidencias/infraestrutura/saidas/32-final-ssh-configuracao-efetiva.txt), [`38`](evidencias/infraestrutura/saidas/38-final-ssh-log-servidor.txt))
+- [x] Autenticação exclusivamente por chave, com `PasswordAuthentication no` aplicado **só depois** de validar a chave ([`18`](evidencias/infraestrutura/saidas/18-ssh-etapa1-chave-ok.txt), [`33`](evidencias/infraestrutura/saidas/33-final-ssh-chave.txt), [`34`](evidencias/infraestrutura/saidas/34-final-ssh-senha-bloqueada.txt))
+- [x] `KbdInteractiveAuthentication no` e demais opções endurecidas ([`32`](evidencias/infraestrutura/saidas/32-final-ssh-configuracao-efetiva.txt))
+- [x] Chaves de host exclusivas por contêiner ([`32`](evidencias/infraestrutura/saidas/32-final-ssh-configuracao-efetiva.txt))
+- [x] Atualizações de segurança aplicadas na imagem ([`39`](evidencias/infraestrutura/saidas/39-final-hardening.txt))
+- [x] Revisão de serviços, pacotes, contas, permissões e SUID no contêiner ([`26`](evidencias/infraestrutura/saidas/26-hardening-analise-inicial.txt), [`39`](evidencias/infraestrutura/saidas/39-final-hardening.txt))
 
-**Frentes de outros integrantes (fora do escopo deste documento):**
+### Pendentes ou não aplicados
 
-- Segurança de rede: firewall/`iptables`, testes de negação de serviço e varreduras com Nmap.
-- Integridade: assinaturas GPG e verificação de hashes SHA-256.
+- [ ] Isolamento de saída das redes (`internal: true` ou equivalente): analisado e **adiado** ([seção 8](#análise-de-internal-true-decisão-adiado))
+- [ ] Remoção do `ubuntu` dos grupos `sudo`/`adm` e do pacote `sudo`: mantidos por decisão do responsável
+- [ ] Remoção de SUID desnecessários, `cap_drop` e `no-new-privileges`: recomendações ([seção 13](#13-hardening-aplicado))
+- [ ] *Passphrase* na chave privada do laboratório
+- [ ] Hardening do **host** Linux Mint: fora do escopo deste trabalho
 
-Ponto em aberto da infraestrutura, ainda sem decisão: definir se o laboratório deve ter **isolamento de saída** (por exemplo, `internal: true` nas redes) e, se tiver, como comprová-lo. Hoje esse isolamento não está configurado.
+**Frentes de outros integrantes (fora deste documento):** firewall/`iptables`, proteção contra varredura e DoS, testes com Nmap, GPG e verificação SHA-256.
 
-## 19. Conclusão
+## 21. Conclusão
 
-A infraestrutura de rede do Shozz Infra Lab está **implementada e funcional**. A auditoria de 2026-11-23 confirmou, com testes reais e evidências salvas, que:
+A infraestrutura do Shozz Infra Lab está **implementada, endurecida e testada**. Com testes reais e evidências salvas, ficou comprovado que:
 
 - os três contêineres e as duas redes existem com o endereçamento planejado;
-- o roteador Ubuntu 24.04 tem uma interface em cada sub-rede e o encaminhamento IPv4 ativo;
-- os clientes alcançam a rede oposta por rotas estáticas que apontam para o roteador;
-- a comunicação LAN ↔ WAN funciona nos dois sentidos, sem perda de pacotes;
-- o tráfego entre as sub-redes **passa de fato pelo roteador Ubuntu**, como mostram quatro provas independentes;
+- o tráfego entre as sub-redes **passa de fato pelo roteador Ubuntu**, nos dois sentidos, sem perda de pacotes;
+- o acesso administrativo ao roteador é feito por **SSH na porta 2222, somente com chave pública, somente pelo usuário `ubuntu`, sem root e sem senha**;
+- as medidas de hardening foram aplicadas **no contêiner**, e o host não foi alterado;
 - não há portas publicadas no host. O isolamento do tráfego de **saída**, porém, não foi configurado nem comprovado.
 
-Esta base está pronta para as próximas etapas: proteger o acesso administrativo (SSH), endurecer o sistema e, nas frentes dos colegas, aplicar filtragem de tráfego e controles de integridade.
+Esta base está pronta para as frentes dos colegas: filtragem de tráfego (firewall) e controles de criptografia e integridade.

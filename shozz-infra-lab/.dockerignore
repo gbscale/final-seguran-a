@@ -1,0 +1,6 @@
+# Contexto de build do roteador (shozz-infra-lab/): envia ao build somente o
+# que o Dockerfile copia. Evidências, backups e documentação ficam de fora.
+*
+!hardening/entrypoint.sh
+!hardening/ssh/10-shozz-hardening.conf
+!hardening/ssh/authorized_keys

@@ -1,0 +1,9 @@
+# Coletado em: 2026-11-24 00:09:00 -03
+# T-SSH4 final: porta 22 nao esta mais em escuta; porta 2222 responde (banner sem sufixo da distribuicao)
+$ ssh -o BatchMode=yes -o ConnectTimeout=5 -p 22 ubuntu@10.10.10.1 true 2>&1 | grep -E 'Server host key|Authenticated|Authentications that can continue|LOGIN_OK|uid=|Permission denied|Remote protocol version|^ubuntu-router|Connection refused|sudo'; docker exec shozz-cliente-lan nc -z -w 3 10.10.10.1 22 && echo 'porta 22 ABERTA' || echo 'cliente-lan -> 10.10.10.1:22 FECHADA'; echo '## banner porta 2222'; timeout 3 nc 10.10.10.1 2222 </dev/null | head -1
+
+ssh: connect to host 10.10.10.1 port 22: Connection refused
+cliente-lan -> 10.10.10.1:22 FECHADA
+## banner porta 2222
+SSH-2.0-OpenSSH_9.6p1
+# exit code: 0

@@ -1,0 +1,63 @@
+# Coletado em: 2026-11-24 00:09:14 -03
+# Estado final do hardening DENTRO do conteiner roteador (nao se aplica ao host Linux Mint)
+$ echo '## Atualizacoes pendentes apos o build com apt-get upgrade (apt-get update apenas para consultar)'; docker exec shozz-ubuntu-router sh -c 'apt-get update -qq >/dev/null 2>&1; n=$(apt list --upgradable 2>/dev/null | tail -n +2 | wc -l); echo "pacotes atualizaveis: $n"; apt list --upgradable 2>/dev/null | tail -n +2; rm -rf /var/lib/apt/lists/*'; echo; echo '## Versoes que estavam pendentes no arquivo 26'; docker exec shozz-ubuntu-router dpkg-query -W -f='${Package} ${Version}\n' libc6 libc-bin libsystemd0 libudev1; echo; echo '## Processos (somente sshd)'; docker exec shozz-ubuntu-router ps -eo pid,user,args; echo; echo '## Permissoes de arquivos sensiveis'; docker exec shozz-ubuntu-router sh -c 'ls -l /etc/passwd /etc/shadow /etc/group /etc/gshadow /etc/sudoers /etc/ssh/sshd_config /etc/ssh/sshd_config.d/10-shozz-hardening.conf /usr/local/sbin/shozz-entrypoint.sh /etc/ssh/ssh_host_*; ls -ld /etc/ssh/sshd_config.d /home/ubuntu /home/ubuntu/.ssh; ls -l /home/ubuntu/.ssh/authorized_keys'; echo; echo '## Contas'; docker exec shozz-ubuntu-router sh -c 'grep -vE "(nologin|false|sync)$" /etc/passwd; for u in root ubuntu; do passwd -S $u; done; awk -F: "\$3==0{print \"UID 0: \"\$1}" /etc/passwd'; echo; echo '## sudo para o usuario ubuntu (senha bloqueada; -n = sem prompt)'; ssh -i /home/gabriel/.ssh/shozz_lab_ed25519 -o IdentitiesOnly=yes -o UserKnownHostsFile=/tmp/claude-1000/-home-gabriel-Rotier/016038b1-2fe6-4b7c-b7f0-36823ef92060/scratchpad/known_hosts_lab -o StrictHostKeyChecking=accept-new -o BatchMode=yes -o ConnectTimeout=5 -p 2222 ubuntu@10.10.10.1 'sudo -n true' 2>&1 | grep -v '^Warning'; echo; echo '## Canal de administracao como root a partir do host (docker exec)'; docker exec shozz-ubuntu-router id; echo; echo '## Binarios SUID (mantidos; ver recomendacoes)'; docker exec shozz-ubuntu-router find / -xdev -perm -4000 -type f
+
+## Atualizacoes pendentes apos o build com apt-get upgrade (apt-get update apenas para consultar)
+pacotes atualizaveis: 0
+
+## Versoes que estavam pendentes no arquivo 26
+libc-bin 2.39-0ubuntu8.12
+libc6 2.39-0ubuntu8.12
+libsystemd0 255.4-1ubuntu8.19
+libudev1 255.4-1ubuntu8.19
+
+## Processos (somente sshd)
+    PID USER     COMMAND
+      1 root     sshd: /usr/sbin/sshd -D -e [listener] 0 of 10-100 startups
+    262 root     ps -eo pid,user,args
+
+## Permissoes de arquivos sensiveis
+-rw-r--r-- 1 root root    515 Nov 24 03:07 /etc/group
+-rw-r----- 1 root shadow  438 Nov 24 03:07 /etc/gshadow
+-rw-r--r-- 1 root root    934 Nov 24 03:07 /etc/passwd
+-rw-r----- 1 root shadow  521 Nov 24 03:07 /etc/shadow
+-rw------- 1 root root    513 Nov 24 03:07 /etc/ssh/ssh_host_ecdsa_key
+-rw-r--r-- 1 root root    180 Nov 24 03:07 /etc/ssh/ssh_host_ecdsa_key.pub
+-rw------- 1 root root    411 Nov 24 03:07 /etc/ssh/ssh_host_ed25519_key
+-rw-r--r-- 1 root root    100 Nov 24 03:07 /etc/ssh/ssh_host_ed25519_key.pub
+-rw------- 1 root root   2602 Nov 24 03:07 /etc/ssh/ssh_host_rsa_key
+-rw-r--r-- 1 root root    572 Nov 24 03:07 /etc/ssh/ssh_host_rsa_key.pub
+-rw------- 1 root root   3517 Oct  8 17:19 /etc/ssh/sshd_config
+-rw------- 1 root root   2021 Nov 24 02:57 /etc/ssh/sshd_config.d/10-shozz-hardening.conf
+-r--r----- 1 root root   1800 Jan 29  2024 /etc/sudoers
+-rwxr-xr-x 1 root root    447 Nov 24 03:06 /usr/local/sbin/shozz-entrypoint.sh
+drwxr-xr-x 1 root   root   4096 Nov 24 03:07 /etc/ssh/sshd_config.d
+drwxr-x--- 1 ubuntu ubuntu 4096 Nov 24 03:08 /home/ubuntu
+drwx------ 1 ubuntu ubuntu 4096 Nov 24 03:07 /home/ubuntu/.ssh
+-rw------- 1 ubuntu ubuntu 98 Nov 24 02:57 /home/ubuntu/.ssh/authorized_keys
+
+## Contas
+root:x:0:0:root:/root:/bin/bash
+ubuntu:x:1000:1000:Ubuntu:/home/ubuntu:/bin/bash
+root L 2026-11-10 0 99999 7 -1
+ubuntu L 2026-11-10 0 99999 7 -1
+UID 0: root
+
+## sudo para o usuario ubuntu (senha bloqueada; -n = sem prompt)
+sudo: a password is required
+
+## Canal de administracao como root a partir do host (docker exec)
+uid=0(root) gid=0(root) groups=0(root)
+
+## Binarios SUID (mantidos; ver recomendacoes)
+/usr/bin/newgrp
+/usr/bin/su
+/usr/bin/chsh
+/usr/bin/passwd
+/usr/bin/gpasswd
+/usr/bin/mount
+/usr/bin/chfn
+/usr/bin/umount
+/usr/bin/sudo
+/usr/lib/openssh/ssh-keysign
+# exit code: 0
