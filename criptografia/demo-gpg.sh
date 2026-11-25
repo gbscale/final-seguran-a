@@ -70,7 +70,7 @@ confirm_export() {
         return 1
     fi
     printf 'Fingerprint conferido pelo canal independente simulado: %s\n' "$expected"
-    run "${receiver[@]}" --import-options only-pubkeys --import "$file"
+    run "${receiver[@]}" --import "$file"
 }
 
 confirm_certification() {
