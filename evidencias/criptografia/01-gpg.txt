@@ -1,0 +1,158 @@
+$ bash demo-gpg.sh exportacoes
+Inicio UTC: 2026-11-25T02:42:39Z
+$ gpg --no-options --homedir /tmp/isp-gpg-demo.a2ACaWAL/alice --batch --no-tty --version
+gpg (GnuPG) 2.4.8
+libgcrypt 1.12.0
+Copyright (C) 2025 g10 Code GmbH
+License GNU GPL-3.0-or-later <https://gnu.org/licenses/gpl.html>
+This is free software: you are free to change and redistribute it.
+There is NO WARRANTY, to the extent permitted by law.
+
+Home: /tmp/isp-gpg-demo.a2ACaWAL/alice
+Supported algorithms:
+Pubkey: RSA, ELG, DSA, ECDH, ECDSA, EDDSA
+Cipher: IDEA, 3DES, CAST5, BLOWFISH, AES, AES192, AES256, TWOFISH,
+        CAMELLIA128, CAMELLIA192, CAMELLIA256
+Hash: SHA1, RIPEMD160, SHA256, SHA384, SHA512, SHA224
+Compression: Uncompressed, ZIP, ZLIB, BZIP2
+$ gpg --no-options --homedir /tmp/isp-gpg-demo.a2ACaWAL/alice --batch --no-tty --pinentry-mode loopback --passphrase '' --quick-generate-key Alice\ NOC\ \(ISP\ laboratorio\)\ \<alice@isp.example.invalid\> ed25519 cert\,sign 30d
+gpg: keybox '/tmp/isp-gpg-demo.a2ACaWAL/alice/pubring.kbx' created
+gpg: /tmp/isp-gpg-demo.a2ACaWAL/alice/trustdb.gpg: trustdb created
+gpg: directory '/tmp/isp-gpg-demo.a2ACaWAL/alice/openpgp-revocs.d' created
+gpg: revocation certificate stored as '/tmp/isp-gpg-demo.a2ACaWAL/alice/openpgp-revocs.d/4D6929BE96F996C29E64627B4E028F4D84A8490E.rev'
+$ gpg --no-options --homedir /tmp/isp-gpg-demo.a2ACaWAL/alice --batch --no-tty --with-colons --fingerprint Alice\ NOC\ \(ISP\ laboratorio\)\ \<alice@isp.example.invalid\>
+gpg: checking the trustdb
+gpg: marginals needed: 3  completes needed: 1  trust model: pgp
+gpg: depth: 0  valid:   1  signed:   0  trust: 0-, 0q, 0n, 0m, 0f, 1u
+gpg: next trustdb check due at 2026-12-25
+$ gpg --no-options --homedir /tmp/isp-gpg-demo.a2ACaWAL/alice --batch --no-tty --pinentry-mode loopback --passphrase '' --quick-add-key 4D6929BE96F996C29E64627B4E028F4D84A8490E cv25519 encr 30d
+$ gpg --no-options --homedir /tmp/isp-gpg-demo.a2ACaWAL/bruno --batch --no-tty --pinentry-mode loopback --passphrase '' --quick-generate-key Bruno\ NOC\ \(ISP\ laboratorio\)\ \<bruno@isp.example.invalid\> ed25519 cert\,sign 30d
+gpg: keybox '/tmp/isp-gpg-demo.a2ACaWAL/bruno/pubring.kbx' created
+gpg: /tmp/isp-gpg-demo.a2ACaWAL/bruno/trustdb.gpg: trustdb created
+gpg: directory '/tmp/isp-gpg-demo.a2ACaWAL/bruno/openpgp-revocs.d' created
+gpg: revocation certificate stored as '/tmp/isp-gpg-demo.a2ACaWAL/bruno/openpgp-revocs.d/64A9F803D60502812A84A78C790EC9A1699CE7B3.rev'
+$ gpg --no-options --homedir /tmp/isp-gpg-demo.a2ACaWAL/bruno --batch --no-tty --with-colons --fingerprint Bruno\ NOC\ \(ISP\ laboratorio\)\ \<bruno@isp.example.invalid\>
+gpg: checking the trustdb
+gpg: marginals needed: 3  completes needed: 1  trust model: pgp
+gpg: depth: 0  valid:   1  signed:   0  trust: 0-, 0q, 0n, 0m, 0f, 1u
+gpg: next trustdb check due at 2026-12-25
+$ gpg --no-options --homedir /tmp/isp-gpg-demo.a2ACaWAL/bruno --batch --no-tty --pinentry-mode loopback --passphrase '' --quick-add-key 64A9F803D60502812A84A78C790EC9A1699CE7B3 cv25519 encr 30d
+Fingerprint original de Alice: 4D6929BE96F996C29E64627B4E028F4D84A8490E
+Fingerprint original de Bruno: 64A9F803D60502812A84A78C790EC9A1699CE7B3
+$ gpg --no-options --homedir /tmp/isp-gpg-demo.a2ACaWAL/alice --batch --no-tty --armor --output /tmp/isp-gpg-demo.a2ACaWAL/alice-inicial.asc --export 4D6929BE96F996C29E64627B4E028F4D84A8490E
+$ gpg --no-options --homedir /tmp/isp-gpg-demo.a2ACaWAL/bruno --batch --no-tty --armor --output /tmp/isp-gpg-demo.a2ACaWAL/bruno-inicial.asc --export 64A9F803D60502812A84A78C790EC9A1699CE7B3
+
+Regressao de importacao com os chaveiros de demonstracao
+$ cat -- /tmp/isp-gpg-demo.a2ACaWAL/alice-inicial.asc /tmp/isp-gpg-demo.a2ACaWAL/bruno-inicial.asc
+gpg: keybox '/tmp/isp-gpg-demo.a2ACaWAL/auditoria/pubring.kbx' created
+gpg: /tmp/isp-gpg-demo.a2ACaWAL/auditoria/trustdb.gpg: trustdb created
+$ gpg --no-options --homedir /tmp/isp-gpg-demo.a2ACaWAL/auditoria --batch --no-tty --with-colons --show-keys /tmp/isp-gpg-demo.a2ACaWAL/chaves-extras.asc
+Importacao recusada: o arquivo deve conter apenas a chave publica com o fingerprint esperado.
+$ gpg --no-options --homedir /tmp/isp-gpg-demo.a2ACaWAL/auditoria --batch --no-tty --with-colons --show-keys /tmp/isp-gpg-demo.a2ACaWAL/bruno-inicial.asc
+Importacao recusada: o arquivo deve conter apenas a chave publica com o fingerprint esperado.
+Regressao GPG: chave extra e fingerprint incorreto rejeitados; chaveiro intacto.
+$ gpg --no-options --homedir /tmp/isp-gpg-demo.a2ACaWAL/alice --batch --no-tty --with-colons --show-keys /tmp/isp-gpg-demo.a2ACaWAL/bruno-inicial.asc
+Fingerprint conferido pelo canal independente simulado: 64A9F803D60502812A84A78C790EC9A1699CE7B3
+$ gpg --no-options --homedir /tmp/isp-gpg-demo.a2ACaWAL/alice --batch --no-tty --import-options only-pubkeys --import /tmp/isp-gpg-demo.a2ACaWAL/bruno-inicial.asc
+gpg: key 790EC9A1699CE7B3: public key "Bruno NOC (ISP laboratorio) <bruno@isp.example.invalid>" imported
+gpg: Total number processed: 1
+gpg:               imported: 1
+$ gpg --no-options --homedir /tmp/isp-gpg-demo.a2ACaWAL/bruno --batch --no-tty --with-colons --show-keys /tmp/isp-gpg-demo.a2ACaWAL/alice-inicial.asc
+Fingerprint conferido pelo canal independente simulado: 4D6929BE96F996C29E64627B4E028F4D84A8490E
+$ gpg --no-options --homedir /tmp/isp-gpg-demo.a2ACaWAL/bruno --batch --no-tty --import-options only-pubkeys --import /tmp/isp-gpg-demo.a2ACaWAL/alice-inicial.asc
+gpg: key 4E028F4D84A8490E: public key "Alice NOC (ISP laboratorio) <alice@isp.example.invalid>" imported
+gpg: Total number processed: 1
+gpg:               imported: 1
+$ gpg --no-options --homedir /tmp/isp-gpg-demo.a2ACaWAL/alice --batch --no-tty --yes --pinentry-mode loopback --passphrase '' --quick-sign-key 64A9F803D60502812A84A78C790EC9A1699CE7B3
+
+pub  ed25519/790EC9A1699CE7B3
+     created: 2026-11-25  expires: 2026-12-25  usage: SC
+     trust: unknown       validity: unknown
+ Primary key fingerprint: 64A9 F803 D605 0281 2A84  A78C 790E C9A1 699C E7B3
+
+     Bruno NOC (ISP laboratorio) <bruno@isp.example.invalid>
+
+This key is due to expire on 2026-12-25.
+
+$ gpg --no-options --homedir /tmp/isp-gpg-demo.a2ACaWAL/bruno --batch --no-tty --yes --pinentry-mode loopback --passphrase '' --quick-sign-key 4D6929BE96F996C29E64627B4E028F4D84A8490E
+
+pub  ed25519/4E028F4D84A8490E
+     created: 2026-11-25  expires: 2026-12-25  usage: SC
+     trust: unknown       validity: unknown
+ Primary key fingerprint: 4D69 29BE 96F9 96C2 9E64  627B 4E02 8F4D 84A8 490E
+
+     Alice NOC (ISP laboratorio) <alice@isp.example.invalid>
+
+This key is due to expire on 2026-12-25.
+
+$ gpg --no-options --homedir /tmp/isp-gpg-demo.a2ACaWAL/bruno --batch --no-tty --armor --output /tmp/isp-gpg-demo.a2ACaWAL/transferencia/alice-publica.asc --export 4D6929BE96F996C29E64627B4E028F4D84A8490E
+$ gpg --no-options --homedir /tmp/isp-gpg-demo.a2ACaWAL/alice --batch --no-tty --armor --output /tmp/isp-gpg-demo.a2ACaWAL/transferencia/bruno-publica.asc --export 64A9F803D60502812A84A78C790EC9A1699CE7B3
+$ gpg --no-options --homedir /tmp/isp-gpg-demo.a2ACaWAL/auditoria --batch --no-tty --with-colons --show-keys /tmp/isp-gpg-demo.a2ACaWAL/transferencia/alice-publica.asc
+Fingerprint conferido pelo canal independente simulado: 4D6929BE96F996C29E64627B4E028F4D84A8490E
+$ gpg --no-options --homedir /tmp/isp-gpg-demo.a2ACaWAL/auditoria --batch --no-tty --import-options only-pubkeys --import /tmp/isp-gpg-demo.a2ACaWAL/transferencia/alice-publica.asc
+gpg: key 4E028F4D84A8490E: 1 signature not checked due to a missing key
+gpg: key 4E028F4D84A8490E: public key "Alice NOC (ISP laboratorio) <alice@isp.example.invalid>" imported
+gpg: Total number processed: 1
+gpg:               imported: 1
+gpg: no ultimately trusted keys found
+$ gpg --no-options --homedir /tmp/isp-gpg-demo.a2ACaWAL/auditoria --batch --no-tty --with-colons --show-keys /tmp/isp-gpg-demo.a2ACaWAL/transferencia/bruno-publica.asc
+Fingerprint conferido pelo canal independente simulado: 64A9F803D60502812A84A78C790EC9A1699CE7B3
+$ gpg --no-options --homedir /tmp/isp-gpg-demo.a2ACaWAL/auditoria --batch --no-tty --import-options only-pubkeys --import /tmp/isp-gpg-demo.a2ACaWAL/transferencia/bruno-publica.asc
+gpg: key 790EC9A1699CE7B3: public key "Bruno NOC (ISP laboratorio) <bruno@isp.example.invalid>" imported
+gpg: Total number processed: 1
+gpg:               imported: 1
+gpg: no ultimately trusted keys found
+$ gpg --no-options --homedir /tmp/isp-gpg-demo.a2ACaWAL/auditoria --batch --no-tty --with-colons --check-sigs 4D6929BE96F996C29E64627B4E028F4D84A8490E
+Certificacao de 4D6929BE96F996C29E64627B4E028F4D84A8490E por 64A9F803D60502812A84A78C790EC9A1699CE7B3 verificada no chaveiro publico
+$ gpg --no-options --homedir /tmp/isp-gpg-demo.a2ACaWAL/auditoria --batch --no-tty --with-colons --check-sigs 64A9F803D60502812A84A78C790EC9A1699CE7B3
+Certificacao de 64A9F803D60502812A84A78C790EC9A1699CE7B3 por 4D6929BE96F996C29E64627B4E028F4D84A8490E verificada no chaveiro publico
+$ gpg --no-options --homedir /tmp/isp-gpg-demo.a2ACaWAL/alice --batch --no-tty --pinentry-mode loopback --passphrase '' --armor --local-user 4D6929BE96F996C29E64627B4E028F4D84A8490E --output /tmp/isp-gpg-demo.a2ACaWAL/transferencia/config-isp-demo.sig.asc --detach-sign /tmp/isp-regressao.1tKhPiJ0/gpg/exemplos/config-isp-demo.ini
+$ gpg --no-options --homedir /tmp/isp-gpg-demo.a2ACaWAL/alice --batch --no-tty --pinentry-mode loopback --passphrase '' --armor --local-user 4D6929BE96F996C29E64627B4E028F4D84A8490E --recipient 64A9F803D60502812A84A78C790EC9A1699CE7B3 --output /tmp/isp-gpg-demo.a2ACaWAL/transferencia/config-isp-demo.cifrado.asc --sign --encrypt /tmp/isp-regressao.1tKhPiJ0/gpg/exemplos/config-isp-demo.ini
+gpg: checking the trustdb
+gpg: marginals needed: 3  completes needed: 1  trust model: pgp
+gpg: depth: 0  valid:   1  signed:   1  trust: 0-, 0q, 0n, 0m, 0f, 1u
+gpg: depth: 1  valid:   1  signed:   0  trust: 1-, 0q, 0n, 0m, 0f, 0u
+gpg: next trustdb check due at 2026-12-25
+
+Transferencia simulada de Alice para Bruno
+$ cp -- /tmp/isp-gpg-demo.a2ACaWAL/transferencia/config-isp-demo.cifrado.asc /tmp/isp-gpg-demo.a2ACaWAL/bruno/
+$ gpg --no-options --homedir /tmp/isp-gpg-demo.a2ACaWAL/bruno --batch --no-tty --pinentry-mode loopback --passphrase '' --status-fd 1 --output /tmp/isp-gpg-demo.a2ACaWAL/recuperado.ini --decrypt /tmp/isp-gpg-demo.a2ACaWAL/bruno/config-isp-demo.cifrado.asc
+gpg: encrypted with cv25519 key, ID A0283F0577D0170D, created 2026-11-25
+      "Bruno NOC (ISP laboratorio) <bruno@isp.example.invalid>"
+gpg: Signature made Tue Nov 24 23:42:39 2026 -03
+gpg:                using EDDSA key 4D6929BE96F996C29E64627B4E028F4D84A8490E
+gpg: checking the trustdb
+gpg: marginals needed: 3  completes needed: 1  trust model: pgp
+gpg: depth: 0  valid:   1  signed:   1  trust: 0-, 0q, 0n, 0m, 0f, 1u
+gpg: depth: 1  valid:   1  signed:   0  trust: 1-, 0q, 0n, 0m, 0f, 0u
+gpg: next trustdb check due at 2026-12-25
+gpg: Good signature from "Alice NOC (ISP laboratorio) <alice@isp.example.invalid>" [full]
+[GNUPG:] VALIDSIG 4D6929BE96F996C29E64627B4E028F4D84A8490E 2026-11-25 1795574559 0 4 0 22 10 00 4D6929BE96F996C29E64627B4E028F4D84A8490E
+[GNUPG:] DECRYPTION_OKAY
+$ gpg --no-options --homedir /tmp/isp-gpg-demo.a2ACaWAL/bruno --batch --no-tty --verify /tmp/isp-gpg-demo.a2ACaWAL/transferencia/config-isp-demo.sig.asc /tmp/isp-gpg-demo.a2ACaWAL/recuperado.ini
+gpg: Signature made Tue Nov 24 23:42:39 2026 -03
+gpg:                using EDDSA key 4D6929BE96F996C29E64627B4E028F4D84A8490E
+gpg: Good signature from "Alice NOC (ISP laboratorio) <alice@isp.example.invalid>" [full]
+$ cmp -- /tmp/isp-regressao.1tKhPiJ0/gpg/exemplos/config-isp-demo.ini /tmp/isp-gpg-demo.a2ACaWAL/recuperado.ini
+$ sha256sum -- /tmp/isp-regressao.1tKhPiJ0/gpg/exemplos/config-isp-demo.ini /tmp/isp-gpg-demo.a2ACaWAL/recuperado.ini
+25dae7d50dc7e158b0f4aff916b88a598c40f7e0d5ad5b775bf44d39fdf779d6  /tmp/isp-regressao.1tKhPiJ0/gpg/exemplos/config-isp-demo.ini
+25dae7d50dc7e158b0f4aff916b88a598c40f7e0d5ad5b775bf44d39fdf779d6  /tmp/isp-gpg-demo.a2ACaWAL/recuperado.ini
+Conteudo recuperado identico ao original
+$ gpg --no-options --homedir /tmp/isp-gpg-demo.a2ACaWAL/alice --batch --no-tty --status-fd 1 --output /tmp/isp-gpg-demo.a2ACaWAL/indevido.ini --decrypt /tmp/isp-gpg-demo.a2ACaWAL/transferencia/config-isp-demo.cifrado.asc
+gpg: encrypted with cv25519 key, ID A0283F0577D0170D, created 2026-11-25
+      "Bruno NOC (ISP laboratorio) <bruno@isp.example.invalid>"
+gpg: public key decryption failed: No secret key
+gpg: decryption failed: No secret key
+[GNUPG:] NO_SECKEY A0283F0577D0170D
+$ cp -- /tmp/isp-gpg-demo.a2ACaWAL/recuperado.ini /tmp/isp-gpg-demo.a2ACaWAL/adulterado.ini
+$ gpg --no-options --homedir /tmp/isp-gpg-demo.a2ACaWAL/bruno --batch --no-tty --status-fd 1 --verify /tmp/isp-gpg-demo.a2ACaWAL/transferencia/config-isp-demo.sig.asc /tmp/isp-gpg-demo.a2ACaWAL/adulterado.ini
+gpg: Signature made Tue Nov 24 23:42:39 2026 -03
+gpg:                using EDDSA key 4D6929BE96F996C29E64627B4E028F4D84A8490E
+gpg: BAD signature from "Alice NOC (ISP laboratorio) <alice@isp.example.invalid>" [full]
+[GNUPG:] BADSIG 4E028F4D84A8490E Alice NOC (ISP laboratorio) <alice@isp.example.invalid>
+$ mkdir -- exportacoes
+$ cp -- /tmp/isp-gpg-demo.a2ACaWAL/transferencia/alice-publica.asc /tmp/isp-gpg-demo.a2ACaWAL/transferencia/bruno-publica.asc /tmp/isp-gpg-demo.a2ACaWAL/transferencia/config-isp-demo.cifrado.asc /tmp/isp-gpg-demo.a2ACaWAL/transferencia/config-isp-demo.sig.asc exportacoes/
+DEMONSTRACAO GPG CONCLUIDA
+
+Verificacao independente: uma chave primaria publica por exportacao, nenhum pacote privado, assinatura arquivada valida.
+[exit=0]

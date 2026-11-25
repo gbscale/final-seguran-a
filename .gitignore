@@ -13,10 +13,17 @@ id_rsa
 id_ed25519
 id_ecdsa
 *private*.asc
+*privad*.asc
 *secret*.asc
 
 # Diretorio local de chaves GPG
 .gnupg/
+.gnupg-*/
+private-keys-v1.d/
+openpgp-revocs.d/
+secring.gpg
+criptografia/saida/
+integridade/.estado/
 
 # Arquivos temporarios do sistema
 *.tmp

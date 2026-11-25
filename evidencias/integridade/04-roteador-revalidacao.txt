@@ -1,0 +1,195 @@
+UTC: 2026-11-25T02:45:07Z
+
+## Serviços existentes
+$ docker compose -f shozz-infra-lab/infraestrutura/docker-compose.yml ps --all --services
+cliente-lan
+cliente-wan
+ubuntu-router
+[exit=0, esperado=0]
+
+## Serviços em execução
+$ docker compose -f shozz-infra-lab/infraestrutura/docker-compose.yml ps --services --status running
+cliente-lan
+cliente-wan
+ubuntu-router
+[exit=0, esperado=0]
+
+## Regras antes dos testes
+$ docker compose -f shozz-infra-lab/infraestrutura/docker-compose.yml exec -T ubuntu-router iptables -S
+[saída restrita usada só para comparação]
+[exit=0, esperado=0]
+
+## Identidade da referência da operação atual
+$ docker compose -f shozz-infra-lab/infraestrutura/docker-compose.yml exec -T ubuntu-router sha256sum /var/lib/isp-integridade/referencia.sha256
+[saída restrita usada só para comparação]
+[exit=0, esperado=0]
+
+## Cópia temporária do monitor corrigido
+$ docker compose -f shozz-infra-lab/infraestrutura/docker-compose.yml cp integridade/monitor.sh ubuntu-router:/usr/local/sbin/.isp-integridade-5e457308f3a6
+ shozz-ubuntu-router Copying integridade/monitor.sh to shozz-ubuntu-router:/usr/local/sbin/.isp-integridade-5e457308f3a6
+ shozz-ubuntu-router Copied integridade/monitor.sh to shozz-ubuntu-router:/usr/local/sbin/.isp-integridade-5e457308f3a6
+[exit=0, esperado=0]
+
+## Permissões do monitor temporário
+$ docker compose -f shozz-infra-lab/infraestrutura/docker-compose.yml exec -T ubuntu-router chmod 0755 /usr/local/sbin/.isp-integridade-5e457308f3a6
+
+[exit=0, esperado=0]
+
+## Sintaxe da cópia temporária
+$ docker compose -f shozz-infra-lab/infraestrutura/docker-compose.yml exec -T ubuntu-router bash -n /usr/local/sbin/.isp-integridade-5e457308f3a6
+
+[exit=0, esperado=0]
+
+## Identidade da cópia temporária
+$ docker compose -f shozz-infra-lab/infraestrutura/docker-compose.yml exec -T ubuntu-router sha256sum /usr/local/sbin/.isp-integridade-5e457308f3a6
+[saída restrita usada só para comparação]
+[exit=0, esperado=0]
+
+## Leitura da referência em uso com a versão corrigida
+$ docker compose -f shozz-infra-lab/infraestrutura/docker-compose.yml exec -T ubuntu-router bash /usr/local/sbin/.isp-integridade-5e457308f3a6 check
+2026-11-25T02:45:11Z status=OK alvo=/etc/passwd
+2026-11-25T02:45:11Z status=OK alvo=/etc/shadow
+2026-11-25T02:45:11Z status=OK alvo=iptables-save(filter)
+[exit=0, esperado=0]
+
+## Criação da referência temporária em ambiente real
+$ docker compose -f shozz-infra-lab/infraestrutura/docker-compose.yml exec -T ubuntu-router bash /usr/local/sbin/.isp-integridade-5e457308f3a6 --estado /tmp/isp-integridade-validacao-5e457308f3a6 init
+2026-11-25T02:45:11Z status=REFERENCIA_PREPARADA alvo=referencia transacao=OQWiMluYTy8yWtHS operacao=REFERENCIA_CRIADA
+2026-11-25T02:45:11Z status=REFERENCIA_CRIADA alvo=referencia transacao=OQWiMluYTy8yWtHS
+[exit=0, esperado=0]
+
+## Comparação da referência temporária
+$ docker compose -f shozz-infra-lab/infraestrutura/docker-compose.yml exec -T ubuntu-router bash /usr/local/sbin/.isp-integridade-5e457308f3a6 --estado /tmp/isp-integridade-validacao-5e457308f3a6 check
+2026-11-25T02:45:12Z status=OK alvo=/etc/passwd
+2026-11-25T02:45:12Z status=OK alvo=/etc/shadow
+2026-11-25T02:45:12Z status=OK alvo=iptables-save(filter)
+[exit=0, esperado=0]
+
+## Atualização explícita só da referência temporária
+$ docker compose -f shozz-infra-lab/infraestrutura/docker-compose.yml exec -T ubuntu-router bash /usr/local/sbin/.isp-integridade-5e457308f3a6 --estado /tmp/isp-integridade-validacao-5e457308f3a6 update --confirmar
+2026-11-25T02:45:12Z status=REFERENCIA_PREPARADA alvo=referencia transacao=fBRqVWBrabskyM4Y operacao=REFERENCIA_ATUALIZADA
+2026-11-25T02:45:12Z status=REFERENCIA_ATUALIZADA alvo=referencia transacao=fBRqVWBrabskyM4Y
+[exit=0, esperado=0]
+
+## Permissões do estado temporário
+$ docker compose -f shozz-infra-lab/infraestrutura/docker-compose.yml exec -T ubuntu-router stat -c '%a' /tmp/isp-integridade-validacao-5e457308f3a6 /tmp/isp-integridade-validacao-5e457308f3a6/referencia.sha256 /tmp/isp-integridade-validacao-5e457308f3a6/auditoria.log
+700
+600
+600
+[exit=0, esperado=0]
+
+## Usuário sem acesso à coleta de /etc/shadow
+$ docker compose -f shozz-infra-lab/infraestrutura/docker-compose.yml exec -T --user ubuntu ubuntu-router bash /usr/local/sbin/.isp-integridade-5e457308f3a6 --estado /tmp/isp-integridade-validacao-5e457308f3a6 check
+isp-integridade: A leitura real exige root no conteiner Docker ubuntu-router.
+[exit=2, esperado=2]
+
+## Tráfego LAN para WAN durante os três ciclos
+$ docker compose -f shozz-infra-lab/infraestrutura/docker-compose.yml exec -T -d cliente-lan ping -q -i 1 -c 4 10.20.20.10
+
+[exit=0, esperado=0]
+
+## Três ciclos de monitoramento no estado temporário
+$ docker compose -f shozz-infra-lab/infraestrutura/docker-compose.yml exec -T ubuntu-router bash /usr/local/sbin/.isp-integridade-5e457308f3a6 --estado /tmp/isp-integridade-validacao-5e457308f3a6 watch 1 3
+2026-11-25T02:45:14Z status=CICLO alvo=monitor numero=1
+2026-11-25T02:45:14Z status=OK alvo=/etc/passwd
+2026-11-25T02:45:14Z status=OK alvo=/etc/shadow
+2026-11-25T02:45:14Z status=OK alvo=iptables-save(filter)
+2026-11-25T02:45:15Z status=CICLO alvo=monitor numero=2
+2026-11-25T02:45:15Z status=OK alvo=/etc/passwd
+2026-11-25T02:45:15Z status=OK alvo=/etc/shadow
+2026-11-25T02:45:15Z status=OK alvo=iptables-save(filter)
+2026-11-25T02:45:16Z status=CICLO alvo=monitor numero=3
+2026-11-25T02:45:16Z status=OK alvo=/etc/passwd
+2026-11-25T02:45:16Z status=OK alvo=/etc/shadow
+2026-11-25T02:45:16Z status=OK alvo=iptables-save(filter)
+2026-11-25T02:45:16Z status=ENCERRADO alvo=monitor motivo=ciclos_concluidos
+[exit=0, esperado=0]
+
+## Ping fim a fim LAN para WAN
+$ docker compose -f shozz-infra-lab/infraestrutura/docker-compose.yml exec -T cliente-lan ping -c 2 -W 1 10.20.20.10
+PING 10.20.20.10 (10.20.20.10): 56 data bytes
+64 bytes from 10.20.20.10: seq=0 ttl=63 time=0.189 ms
+64 bytes from 10.20.20.10: seq=1 ttl=63 time=0.238 ms
+
+--- 10.20.20.10 ping statistics ---
+2 packets transmitted, 2 packets received, 0% packet loss
+round-trip min/avg/max = 0.189/0.213/0.238 ms
+[exit=0, esperado=0]
+
+## SSH aberto pela LAN
+$ docker compose -f shozz-infra-lab/infraestrutura/docker-compose.yml exec -T cliente-lan nmap -sT -n -Pn --max-retries 1 -p 2222 10.10.10.1
+Starting Nmap 7.97 ( https://nmap.org ) at 2026-11-25 02:45 +0000
+Nmap scan report for 10.10.10.1
+Host is up (0.00011s latency).
+
+PORT     STATE SERVICE
+2222/tcp open  EtherNetIP-1
+
+Nmap done: 1 IP address (1 host up) scanned in 0.09 seconds
+[exit=0, esperado=0]
+
+## SSH filtrado pela WAN
+$ docker compose -f shozz-infra-lab/infraestrutura/docker-compose.yml exec -T cliente-wan nmap -sT -n -Pn --max-retries 1 -p 2222 10.20.20.1
+Starting Nmap 7.97 ( https://nmap.org ) at 2026-11-25 02:45 +0000
+Nmap scan report for 10.20.20.1
+Host is up.
+
+PORT     STATE    SERVICE
+2222/tcp filtered EtherNetIP-1
+
+Nmap done: 1 IP address (1 host up) scanned in 2.07 seconds
+[exit=0, esperado=0]
+
+## Validação da configuração do SSH
+$ docker compose -f shozz-infra-lab/infraestrutura/docker-compose.yml exec -T ubuntu-router /usr/sbin/sshd -t
+
+[exit=0, esperado=0]
+
+## Regras após os testes
+$ docker compose -f shozz-infra-lab/infraestrutura/docker-compose.yml exec -T ubuntu-router iptables -S
+[saída restrita usada só para comparação]
+[exit=0, esperado=0]
+
+## Instalação atômica da cópia validada
+$ docker compose -f shozz-infra-lab/infraestrutura/docker-compose.yml exec -T ubuntu-router mv -T /usr/local/sbin/.isp-integridade-5e457308f3a6 /usr/local/sbin/isp-integridade.sh
+
+[exit=0, esperado=0]
+
+## Verificação do monitor instalado
+$ docker compose -f shozz-infra-lab/infraestrutura/docker-compose.yml exec -T ubuntu-router bash /usr/local/sbin/isp-integridade.sh check
+2026-11-25T02:45:22Z status=OK alvo=/etc/passwd
+2026-11-25T02:45:22Z status=OK alvo=/etc/shadow
+2026-11-25T02:45:22Z status=OK alvo=iptables-save(filter)
+[exit=0, esperado=0]
+
+## Identidade final da referência em uso
+$ docker compose -f shozz-infra-lab/infraestrutura/docker-compose.yml exec -T ubuntu-router sha256sum /var/lib/isp-integridade/referencia.sha256
+[saída restrita usada só para comparação]
+[exit=0, esperado=0]
+
+## Estado final da infraestrutura
+$ docker compose -f shozz-infra-lab/infraestrutura/docker-compose.yml ps
+NAME                  IMAGE                           COMMAND                  SERVICE         CREATED       STATUS          PORTS
+shozz-cliente-lan     alpine:3.22                     "sh -c 'ip route rep…"   cliente-lan     4 hours ago   Up 19 minutes
+shozz-cliente-wan     alpine:3.22                     "sh -c 'ip route rep…"   cliente-wan     4 hours ago   Up 19 minutes
+shozz-ubuntu-router   shozz-infra-lab-ubuntu-router   "/usr/local/sbin/sho…"   ubuntu-router   4 hours ago   Up 19 minutes   2222/tcp
+[exit=0, esperado=0]
+
+## Os três serviços permanecem em execução
+$ docker compose -f shozz-infra-lab/infraestrutura/docker-compose.yml ps --services --status running
+cliente-lan
+cliente-wan
+ubuntu-router
+[exit=0, esperado=0]
+
+VALIDACAO INTEGRADA CONCLUIDA: nove OK, regras e referencia em uso preservadas, tres servicos Up.
+
+## Remoção apenas dos arquivos de estado temporários
+$ docker compose -f shozz-infra-lab/infraestrutura/docker-compose.yml exec -T ubuntu-router rm -f -- /tmp/isp-integridade-validacao-5e457308f3a6/referencia.sha256 /tmp/isp-integridade-validacao-5e457308f3a6/auditoria.log /tmp/isp-integridade-validacao-5e457308f3a6/operacao.lock
+
+[exit=0, esperado=0]
+
+## Remoção do diretório de estado temporário vazio
+$ docker compose -f shozz-infra-lab/infraestrutura/docker-compose.yml exec -T ubuntu-router rmdir -- /tmp/isp-integridade-validacao-5e457308f3a6
+
+[exit=0, esperado=0]

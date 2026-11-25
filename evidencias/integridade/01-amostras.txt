@@ -1,0 +1,152 @@
+$ bash teste.sh
+Inicio UTC: 2026-11-25T02:42:32Z
+
+$ bash /tmp/isp-regressao.1tKhPiJ0/integridade/monitor.sh --estado /tmp/isp-integridade-teste.XU2EcvQR/estado --amostras /tmp/isp-integridade-teste.XU2EcvQR/amostras init
+2026-11-25T02:42:32Z status=REFERENCIA_PREPARADA alvo=referencia transacao=SJwhYPiOYQrwe58P operacao=REFERENCIA_CRIADA
+2026-11-25T02:42:32Z status=REFERENCIA_CRIADA alvo=referencia transacao=SJwhYPiOYQrwe58P
+[exit=0, esperado=0]
+
+$ bash /tmp/isp-regressao.1tKhPiJ0/integridade/monitor.sh --estado /tmp/isp-integridade-teste.XU2EcvQR/estado --amostras /tmp/isp-integridade-teste.XU2EcvQR/amostras check
+2026-11-25T02:42:32Z status=OK alvo=/etc/passwd
+2026-11-25T02:42:32Z status=OK alvo=/etc/shadow
+2026-11-25T02:42:32Z status=OK alvo=iptables-save(filter)
+[exit=0, esperado=0]
+
+$ stat -c %a\ %n /tmp/isp-integridade-teste.XU2EcvQR/estado /tmp/isp-integridade-teste.XU2EcvQR/estado/referencia.sha256 /tmp/isp-integridade-teste.XU2EcvQR/estado/auditoria.log /tmp/isp-integridade-teste.XU2EcvQR/estado/operacao.lock
+700 /tmp/isp-integridade-teste.XU2EcvQR/estado
+600 /tmp/isp-integridade-teste.XU2EcvQR/estado/referencia.sha256
+600 /tmp/isp-integridade-teste.XU2EcvQR/estado/auditoria.log
+600 /tmp/isp-integridade-teste.XU2EcvQR/estado/operacao.lock
+[exit=0, esperado=0]
+
+$ bash /tmp/isp-regressao.1tKhPiJ0/integridade/monitor.sh --estado /tmp/isp-integridade-teste.XU2EcvQR/estado --amostras /tmp/isp-integridade-teste.XU2EcvQR/amostras init
+2026-11-25T02:42:32Z status=ERRO alvo=referencia motivo=referencia_ja_existe
+[exit=2, esperado=2]
+
+$ bash /tmp/isp-regressao.1tKhPiJ0/integridade/monitor.sh --estado /tmp/isp-integridade-teste.XU2EcvQR/estado --amostras /tmp/isp-integridade-teste.XU2EcvQR/amostras update
+Uso: bash monitor.sh [--estado DIR] [--amostras DIR] init|check|update --confirmar|watch SEGUNDOS [CICLOS]
+[exit=2, esperado=2]
+
+Alteracao controlada apenas de datas e contadores no snapshot de exemplo
+
+$ bash /tmp/isp-regressao.1tKhPiJ0/integridade/monitor.sh --estado /tmp/isp-integridade-teste.XU2EcvQR/estado --amostras /tmp/isp-integridade-teste.XU2EcvQR/amostras check
+2026-11-25T02:42:32Z status=OK alvo=/etc/passwd
+2026-11-25T02:42:32Z status=OK alvo=/etc/shadow
+2026-11-25T02:42:32Z status=OK alvo=iptables-save(filter)
+[exit=0, esperado=0]
+
+Alteracoes controladas nos tres arquivos de amostra em /tmp
+
+$ bash /tmp/isp-regressao.1tKhPiJ0/integridade/monitor.sh --estado /tmp/isp-integridade-teste.XU2EcvQR/estado --amostras /tmp/isp-integridade-teste.XU2EcvQR/amostras check
+2026-11-25T02:42:32Z status=ALERTA alvo=/etc/passwd motivo=sha256_divergente
+2026-11-25T02:42:32Z status=ALERTA alvo=/etc/shadow motivo=sha256_divergente
+2026-11-25T02:42:32Z status=ALERTA alvo=iptables-save(filter) motivo=sha256_divergente
+[exit=1, esperado=1]
+
+$ bash /tmp/isp-regressao.1tKhPiJ0/integridade/monitor.sh --estado /tmp/isp-integridade-teste.XU2EcvQR/estado --amostras /tmp/isp-integridade-teste.XU2EcvQR/amostras watch 1 3
+2026-11-25T02:42:33Z status=CICLO alvo=monitor numero=1
+2026-11-25T02:42:33Z status=ALERTA alvo=/etc/passwd motivo=sha256_divergente
+2026-11-25T02:42:33Z status=ALERTA alvo=/etc/shadow motivo=sha256_divergente
+2026-11-25T02:42:33Z status=ALERTA alvo=iptables-save(filter) motivo=sha256_divergente
+2026-11-25T02:42:34Z status=CICLO alvo=monitor numero=2
+2026-11-25T02:42:34Z status=ALERTA alvo=/etc/passwd motivo=sha256_divergente
+2026-11-25T02:42:34Z status=ALERTA alvo=/etc/shadow motivo=sha256_divergente
+2026-11-25T02:42:34Z status=ALERTA alvo=iptables-save(filter) motivo=sha256_divergente
+2026-11-25T02:42:35Z status=CICLO alvo=monitor numero=3
+2026-11-25T02:42:35Z status=ALERTA alvo=/etc/passwd motivo=sha256_divergente
+2026-11-25T02:42:35Z status=ALERTA alvo=/etc/shadow motivo=sha256_divergente
+2026-11-25T02:42:35Z status=ALERTA alvo=iptables-save(filter) motivo=sha256_divergente
+2026-11-25T02:42:35Z status=ENCERRADO alvo=monitor motivo=ciclos_concluidos
+[exit=1, esperado=1]
+
+$ bash /tmp/isp-regressao.1tKhPiJ0/integridade/monitor.sh --estado /tmp/isp-integridade-teste.XU2EcvQR/estado --amostras /tmp/isp-integridade-teste.XU2EcvQR/amostras update --confirmar
+2026-11-25T02:42:35Z status=REFERENCIA_PREPARADA alvo=referencia transacao=juDryklZaIk0jHyq operacao=REFERENCIA_ATUALIZADA
+2026-11-25T02:42:35Z status=REFERENCIA_ATUALIZADA alvo=referencia transacao=juDryklZaIk0jHyq
+[exit=0, esperado=0]
+
+$ bash /tmp/isp-regressao.1tKhPiJ0/integridade/monitor.sh --estado /tmp/isp-integridade-teste.XU2EcvQR/estado --amostras /tmp/isp-integridade-teste.XU2EcvQR/amostras check
+2026-11-25T02:42:35Z status=OK alvo=/etc/passwd
+2026-11-25T02:42:35Z status=OK alvo=/etc/shadow
+2026-11-25T02:42:35Z status=OK alvo=iptables-save(filter)
+[exit=0, esperado=0]
+
+$ bash /tmp/isp-regressao.1tKhPiJ0/integridade/monitor.sh --estado /tmp/isp-integridade-teste.XU2EcvQR/estado-original --amostras /tmp/isp-integridade-teste.XU2EcvQR/amostras check
+2026-11-25T02:42:35Z status=OK alvo=/etc/passwd
+2026-11-25T02:42:35Z status=OK alvo=/etc/shadow
+2026-11-25T02:42:35Z status=OK alvo=iptables-save(filter)
+[exit=0, esperado=0]
+
+$ bash /tmp/isp-regressao.1tKhPiJ0/integridade/monitor.sh --estado /tmp/isp-integridade-teste.XU2EcvQR/estado-original --amostras /tmp/isp-integridade-teste.XU2EcvQR/amostras update --confirmar
+2026-11-25T02:42:35Z status=REFERENCIA_PREPARADA alvo=referencia transacao=olSzk8JCJJleYHDF operacao=REFERENCIA_ATUALIZADA
+2026-11-25T02:42:36Z status=REFERENCIA_ATUALIZADA alvo=referencia transacao=olSzk8JCJJleYHDF
+[exit=0, esperado=0]
+
+$ bash /tmp/isp-regressao.1tKhPiJ0/integridade/monitor.sh --estado /tmp/isp-integridade-teste.XU2EcvQR/estado-original --amostras /tmp/isp-integridade-teste.XU2EcvQR/amostras check
+2026-11-25T02:42:36Z status=OK alvo=/etc/passwd
+2026-11-25T02:42:36Z status=OK alvo=/etc/shadow
+2026-11-25T02:42:36Z status=OK alvo=iptables-save(filter)
+[exit=0, esperado=0]
+Referencia v1 lida e migrada por atualizacao explicita.
+
+$ timeout 2s bash /tmp/isp-regressao.1tKhPiJ0/integridade/monitor.sh --estado /tmp/isp-integridade-teste.XU2EcvQR/estado --amostras /tmp/isp-integridade-teste.XU2EcvQR/amostras watch 30
+2026-11-25T02:42:36Z status=CICLO alvo=monitor numero=1
+2026-11-25T02:42:36Z status=OK alvo=/etc/passwd
+2026-11-25T02:42:36Z status=OK alvo=/etc/shadow
+2026-11-25T02:42:36Z status=OK alvo=iptables-save(filter)
+Terminated                 sleep "$interval"
+2026-11-25T02:42:38Z status=ENCERRADO alvo=monitor motivo=sinal
+[exit=124, esperado=124]
+
+Regressao de auditoria: falha antes da troca deve preservar a referencia
+
+$ env PATH=/tmp/isp-integridade-teste.XU2EcvQR/mock:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin bash /tmp/isp-regressao.1tKhPiJ0/integridade/monitor.sh --estado /tmp/isp-integridade-teste.XU2EcvQR/estado --amostras /tmp/isp-integridade-teste.XU2EcvQR/amostras update --confirmar
+isp-integridade: falha na preparacao da auditoria; referencia preservada.
+[exit=2, esperado=2]
+
+$ bash /tmp/isp-regressao.1tKhPiJ0/integridade/monitor.sh --estado /tmp/isp-integridade-teste.XU2EcvQR/estado --amostras /tmp/isp-integridade-teste.XU2EcvQR/amostras check
+2026-11-25T02:42:38Z status=ALERTA alvo=/etc/passwd motivo=sha256_divergente
+2026-11-25T02:42:38Z status=OK alvo=/etc/shadow
+2026-11-25T02:42:38Z status=OK alvo=iptables-save(filter)
+[exit=1, esperado=1]
+
+Regressao de auditoria: permissoes inseguras impedem a troca
+
+$ bash /tmp/isp-regressao.1tKhPiJ0/integridade/monitor.sh --estado /tmp/isp-integridade-teste.XU2EcvQR/estado --amostras /tmp/isp-integridade-teste.XU2EcvQR/amostras update --confirmar
+isp-integridade: Arquivo de estado sem protecao: auditoria.log.
+[exit=2, esperado=2]
+
+Regressao de auditoria: falha na troca preserva a referencia e registra abortamento
+
+$ env PATH=/tmp/isp-integridade-teste.XU2EcvQR/rename-mock:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin bash /tmp/isp-regressao.1tKhPiJ0/integridade/monitor.sh --estado /tmp/isp-integridade-teste.XU2EcvQR/estado --amostras /tmp/isp-integridade-teste.XU2EcvQR/amostras update --confirmar
+2026-11-25T02:42:38Z status=REFERENCIA_PREPARADA alvo=referencia transacao=C1eb6c9Fh6nlvHWe operacao=REFERENCIA_ATUALIZADA
+2026-11-25T02:42:38Z status=REFERENCIA_ABORTADA alvo=referencia transacao=C1eb6c9Fh6nlvHWe motivo=troca_falhou
+isp-integridade: nao foi possivel trocar a referencia.
+[exit=2, esperado=2]
+
+Regressao de auditoria: falha apos a troca informa o commit e permite conciliacao
+
+$ env PATH=/tmp/isp-integridade-teste.XU2EcvQR/mock:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin REAL_TEE=/usr/bin/tee bash /tmp/isp-regressao.1tKhPiJ0/integridade/monitor.sh --estado /tmp/isp-integridade-teste.XU2EcvQR/estado --amostras /tmp/isp-integridade-teste.XU2EcvQR/amostras update --confirmar
+2026-11-25T02:42:38Z status=REFERENCIA_PREPARADA alvo=referencia transacao=Xx3tHdzM0vRFDQHH operacao=REFERENCIA_ATUALIZADA
+isp-integridade: referencia efetivada (transacao=Xx3tHdzM0vRFDQHH); confirmacao de auditoria pendente.
+[exit=0, esperado=0]
+
+$ bash /tmp/isp-regressao.1tKhPiJ0/integridade/monitor.sh --estado /tmp/isp-integridade-teste.XU2EcvQR/estado --amostras /tmp/isp-integridade-teste.XU2EcvQR/amostras check
+2026-11-25T02:42:39Z status=REFERENCIA_RECUPERADA alvo=referencia transacao=Xx3tHdzM0vRFDQHH
+2026-11-25T02:42:39Z status=OK alvo=/etc/passwd
+2026-11-25T02:42:39Z status=OK alvo=/etc/shadow
+2026-11-25T02:42:39Z status=OK alvo=iptables-save(filter)
+[exit=0, esperado=0]
+
+$ bash /tmp/isp-regressao.1tKhPiJ0/integridade/monitor.sh --estado /tmp/isp-integridade-teste.XU2EcvQR/estado --amostras /tmp/isp-integridade-teste.XU2EcvQR/amostras check
+2026-11-25T02:42:39Z status=OK alvo=/etc/passwd
+2026-11-25T02:42:39Z status=OK alvo=/etc/shadow
+2026-11-25T02:42:39Z status=OK alvo=iptables-save(filter)
+[exit=0, esperado=0]
+
+Eventos gravados no log protegido
+2026-11-25T02:42:32Z status=ALERTA alvo=/etc/passwd motivo=sha256_divergente
+2026-11-25T02:42:32Z status=ALERTA alvo=/etc/shadow motivo=sha256_divergente
+2026-11-25T02:42:32Z status=ALERTA alvo=iptables-save(filter) motivo=sha256_divergente
+2026-11-25T02:42:35Z status=REFERENCIA_ATUALIZADA alvo=referencia transacao=juDryklZaIk0jHyq
+TESTES DE INTEGRIDADE CONCLUIDOS
+[exit=0]
