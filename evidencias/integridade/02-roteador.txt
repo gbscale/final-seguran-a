@@ -1,0 +1,256 @@
+UTC: 2026-11-25T00:02:20Z
+
+## Contêineres antes da instalação
+$ docker inspect --format '{{.Name}} {{.Id}}' shozz-ubuntu-router shozz-cliente-lan shozz-cliente-wan
+/shozz-ubuntu-router 45fc6757f4f007497f6a4919379a48f917437ada5df385c3b7b4027fdaa60c6d
+/shozz-cliente-lan 6dc706e6e2722fdb69463fdcd864d89f2c197d7a630b9efa2de79d2fbb6ac4b6
+/shozz-cliente-wan d1fbb7412e5010175d22782906a31e1652bcce0357146ec1b03c30baf7da0c02
+[exit=0, esperado=0]
+
+## Regras ativas antes da leitura de integridade
+$ docker compose -f shozz-infra-lab/infraestrutura/docker-compose.yml exec -T ubuntu-router iptables -S
+-P INPUT DROP
+-P FORWARD DROP
+-P OUTPUT ACCEPT
+-N SHOZZ_FORWARD_DENY
+-N SHOZZ_INPUT_DENY
+-N SHOZZ_SSH
+-N SHOZZ_SSH_RATE
+-A INPUT -i lo -j ACCEPT
+-A INPUT -m conntrack --ctstate INVALID -j DROP
+-A INPUT ! -s 10.10.10.0/24 -i eth0 -j SHOZZ_INPUT_DENY
+-A INPUT ! -s 10.20.20.0/24 -i eth1 -j SHOZZ_INPUT_DENY
+-A INPUT -p tcp -m tcp --dport 2222 -j SHOZZ_SSH
+-A INPUT -s 10.10.10.10/32 -d 10.10.10.1/32 -i eth0 -p icmp -m icmp --icmp-type 8 -m hashlimit --hashlimit-upto 3/sec --hashlimit-burst 5 --hashlimit-mode srcip --hashlimit-name shozz_icmp_in -j ACCEPT
+-A INPUT -p icmp -m icmp --icmp-type 8 -j SHOZZ_INPUT_DENY
+-A INPUT -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
+-A INPUT -j SHOZZ_INPUT_DENY
+-A FORWARD -m conntrack --ctstate INVALID -j DROP
+-A FORWARD ! -s 10.10.10.0/24 -i eth0 -j SHOZZ_FORWARD_DENY
+-A FORWARD ! -s 10.20.20.0/24 -i eth1 -j SHOZZ_FORWARD_DENY
+-A FORWARD -s 10.10.10.10/32 -d 10.20.20.10/32 -i eth0 -o eth1 -p icmp -m icmp --icmp-type 8 -m hashlimit --hashlimit-upto 3/sec --hashlimit-burst 5 --hashlimit-mode srcip --hashlimit-name shozz_icmp_fwd -j ACCEPT
+-A FORWARD -p icmp -m icmp --icmp-type 8 -j SHOZZ_FORWARD_DENY
+-A FORWARD -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
+-A FORWARD -j SHOZZ_FORWARD_DENY
+-A SHOZZ_FORWARD_DENY -m limit --limit 4/min --limit-burst 4 -j LOG --log-prefix "shozz forward drop " --log-level 6
+-A SHOZZ_FORWARD_DENY -j DROP
+-A SHOZZ_INPUT_DENY -m limit --limit 4/min --limit-burst 4 -j LOG --log-prefix "shozz input drop " --log-level 6
+-A SHOZZ_INPUT_DENY -j DROP
+-A SHOZZ_SSH ! -i eth0 -j SHOZZ_INPUT_DENY
+-A SHOZZ_SSH ! -d 10.10.10.1/32 -j SHOZZ_INPUT_DENY
+-A SHOZZ_SSH -s 10.10.10.10/32 -m conntrack --ctstate ESTABLISHED -j ACCEPT
+-A SHOZZ_SSH -s 10.10.10.254/32 -m conntrack --ctstate ESTABLISHED -j ACCEPT
+-A SHOZZ_SSH -s 10.10.10.10/32 -p tcp -m tcp --tcp-flags FIN,SYN,RST,ACK SYN -m conntrack --ctstate NEW -j SHOZZ_SSH_RATE
+-A SHOZZ_SSH -s 10.10.10.254/32 -p tcp -m tcp --tcp-flags FIN,SYN,RST,ACK SYN -m conntrack --ctstate NEW -j SHOZZ_SSH_RATE
+-A SHOZZ_SSH -j SHOZZ_INPUT_DENY
+-A SHOZZ_SSH_RATE -m hashlimit --hashlimit-upto 12/min --hashlimit-burst 4 --hashlimit-mode srcip --hashlimit-name shozz_ssh_new -j ACCEPT
+-A SHOZZ_SSH_RATE -m limit --limit 4/min --limit-burst 4 -j LOG --log-prefix "shozz ssh rate " --log-level 6
+-A SHOZZ_SSH_RATE -j DROP
+[exit=0, esperado=0]
+
+## Caminho do monitor ainda livre
+$ docker compose -f shozz-infra-lab/infraestrutura/docker-compose.yml exec -T ubuntu-router test '!' -e /usr/local/sbin/isp-integridade.sh
+
+[exit=0, esperado=0]
+
+## Diretório da referência ainda ausente
+$ docker compose -f shozz-infra-lab/infraestrutura/docker-compose.yml exec -T ubuntu-router test '!' -e /var/lib/isp-integridade
+
+[exit=0, esperado=0]
+
+## Instalação do monitor sem rebuild
+$ docker compose -f shozz-infra-lab/infraestrutura/docker-compose.yml cp integridade/monitor.sh ubuntu-router:/usr/local/sbin/isp-integridade.sh
+ shozz-ubuntu-router Copying integridade/monitor.sh to shozz-ubuntu-router:/usr/local/sbin/isp-integridade.sh
+ shozz-ubuntu-router Copied integridade/monitor.sh to shozz-ubuntu-router:/usr/local/sbin/isp-integridade.sh
+[exit=0, esperado=0]
+
+## Permissões do monitor instalado
+$ docker compose -f shozz-infra-lab/infraestrutura/docker-compose.yml exec -T ubuntu-router chmod 0755 /usr/local/sbin/isp-integridade.sh
+
+[exit=0, esperado=0]
+
+## Verificação Bash da cópia instalada
+$ docker compose -f shozz-infra-lab/infraestrutura/docker-compose.yml exec -T ubuntu-router bash -n /usr/local/sbin/isp-integridade.sh
+
+[exit=0, esperado=0]
+
+## Criação explícita da referência de contas e regras ativas
+$ docker compose -f shozz-infra-lab/infraestrutura/docker-compose.yml exec -T ubuntu-router bash /usr/local/sbin/isp-integridade.sh init
+2026-11-25T00:02:24Z status=REFERENCIA_CRIADA alvo=/etc/passwd
+2026-11-25T00:02:24Z status=REFERENCIA_CRIADA alvo=/etc/shadow
+2026-11-25T00:02:24Z status=REFERENCIA_CRIADA alvo=iptables-save(filter)
+[exit=0, esperado=0]
+
+## Verificação real das três referências
+$ docker compose -f shozz-infra-lab/infraestrutura/docker-compose.yml exec -T ubuntu-router bash /usr/local/sbin/isp-integridade.sh check
+2026-11-25T00:02:24Z status=OK alvo=/etc/passwd
+2026-11-25T00:02:24Z status=OK alvo=/etc/shadow
+2026-11-25T00:02:24Z status=OK alvo=iptables-save(filter)
+[exit=0, esperado=0]
+
+## Usuário ubuntu não tem permissão para a leitura real
+$ docker compose -f shozz-infra-lab/infraestrutura/docker-compose.yml exec -T --user ubuntu ubuntu-router bash /usr/local/sbin/isp-integridade.sh check
+isp-integridade: A leitura real exige root no conteiner Docker ubuntu-router.
+[exit=2, esperado=2]
+
+## Owner e modo do diretório, da referência e da auditoria
+$ docker compose -f shozz-infra-lab/infraestrutura/docker-compose.yml exec -T ubuntu-router stat -c '%u:%a %n' /var/lib/isp-integridade /var/lib/isp-integridade/referencia.sha256 /var/lib/isp-integridade/auditoria.log
+0:700 /var/lib/isp-integridade
+0:600 /var/lib/isp-integridade/referencia.sha256
+0:600 /var/lib/isp-integridade/auditoria.log
+[exit=0, esperado=0]
+
+## Contador ICMP antes do monitoramento periódico
+$ docker compose -f shozz-infra-lab/infraestrutura/docker-compose.yml exec -T ubuntu-router iptables -nvxL FORWARD
+Chain FORWARD (policy DROP 0 packets, 0 bytes)
+    pkts      bytes target     prot opt in     out     source               destination
+       0        0 DROP       0    --  *      *       0.0.0.0/0            0.0.0.0/0            ctstate INVALID
+       0        0 SHOZZ_FORWARD_DENY  0    --  eth0   *      !10.10.10.0/24        0.0.0.0/0
+       0        0 SHOZZ_FORWARD_DENY  0    --  eth1   *      !10.20.20.0/24        0.0.0.0/0
+       7      588 ACCEPT     1    --  eth0   eth1    10.10.10.10          10.20.20.10          icmptype 8 limit: up to 3/sec burst 5 mode srcip
+       2      168 SHOZZ_FORWARD_DENY  1    --  *      *       0.0.0.0/0            0.0.0.0/0            icmptype 8
+       7      588 ACCEPT     0    --  *      *       0.0.0.0/0            0.0.0.0/0            ctstate RELATED,ESTABLISHED
+       0        0 SHOZZ_FORWARD_DENY  0    --  *      *       0.0.0.0/0            0.0.0.0/0
+[exit=0, esperado=0]
+
+## Ping LAN para WAN pelo roteador
+$ docker compose -f shozz-infra-lab/infraestrutura/docker-compose.yml exec -T cliente-lan ping -c 2 -W 1 10.20.20.10
+PING 10.20.20.10 (10.20.20.10): 56 data bytes
+64 bytes from 10.20.20.10: seq=0 ttl=63 time=5.943 ms
+64 bytes from 10.20.20.10: seq=1 ttl=63 time=0.159 ms
+
+--- 10.20.20.10 ping statistics ---
+2 packets transmitted, 2 packets received, 0% packet loss
+round-trip min/avg/max = 0.159/3.051/5.943 ms
+[exit=0, esperado=0]
+
+## Cinco pings espaçados durante os ciclos do monitor
+$ docker compose -f shozz-infra-lab/infraestrutura/docker-compose.yml exec -T -d cliente-lan ping -q -i 1 -c 5 10.20.20.10
+
+[exit=0, esperado=0]
+
+## Três ciclos do monitor durante tráfego do laboratório
+$ docker compose -f shozz-infra-lab/infraestrutura/docker-compose.yml exec -T ubuntu-router bash /usr/local/sbin/isp-integridade.sh watch 1 3
+2026-11-25T00:02:27Z status=CICLO alvo=monitor numero=1
+2026-11-25T00:02:27Z status=OK alvo=/etc/passwd
+2026-11-25T00:02:27Z status=OK alvo=/etc/shadow
+2026-11-25T00:02:27Z status=OK alvo=iptables-save(filter)
+2026-11-25T00:02:28Z status=CICLO alvo=monitor numero=2
+2026-11-25T00:02:28Z status=OK alvo=/etc/passwd
+2026-11-25T00:02:28Z status=OK alvo=/etc/shadow
+2026-11-25T00:02:28Z status=OK alvo=iptables-save(filter)
+2026-11-25T00:02:29Z status=CICLO alvo=monitor numero=3
+2026-11-25T00:02:29Z status=OK alvo=/etc/passwd
+2026-11-25T00:02:29Z status=OK alvo=/etc/shadow
+2026-11-25T00:02:29Z status=OK alvo=iptables-save(filter)
+2026-11-25T00:02:29Z status=ENCERRADO alvo=monitor motivo=ciclos_concluidos
+[exit=0, esperado=0]
+
+## Contador ICMP depois do monitoramento periódico
+$ docker compose -f shozz-infra-lab/infraestrutura/docker-compose.yml exec -T ubuntu-router iptables -nvxL FORWARD
+Chain FORWARD (policy DROP 0 packets, 0 bytes)
+    pkts      bytes target     prot opt in     out     source               destination
+       0        0 DROP       0    --  *      *       0.0.0.0/0            0.0.0.0/0            ctstate INVALID
+       0        0 SHOZZ_FORWARD_DENY  0    --  eth0   *      !10.10.10.0/24        0.0.0.0/0
+       0        0 SHOZZ_FORWARD_DENY  0    --  eth1   *      !10.20.20.0/24        0.0.0.0/0
+      12     1008 ACCEPT     1    --  eth0   eth1    10.10.10.10          10.20.20.10          icmptype 8 limit: up to 3/sec burst 5 mode srcip
+       2      168 SHOZZ_FORWARD_DENY  1    --  *      *       0.0.0.0/0            0.0.0.0/0            icmptype 8
+      12     1008 ACCEPT     0    --  *      *       0.0.0.0/0            0.0.0.0/0            ctstate RELATED,ESTABLISHED
+       0        0 SHOZZ_FORWARD_DENY  0    --  *      *       0.0.0.0/0            0.0.0.0/0
+[exit=0, esperado=0]
+[validado: contador de ICMP aceito aumentou em 5 e os hashes continuaram OK]
+
+## SSH acessível pela LAN após monitoramento
+$ docker compose -f shozz-infra-lab/infraestrutura/docker-compose.yml exec -T cliente-lan nmap -sT -n -Pn --max-retries 1 --reason -p 2222 10.10.10.1
+Starting Nmap 7.97 ( https://nmap.org ) at 2026-11-25 00:02 +0000
+Nmap scan report for 10.10.10.1
+Host is up, received user-set (0.00017s latency).
+
+PORT     STATE SERVICE      REASON
+2222/tcp open  EtherNetIP-1 syn-ack
+
+Nmap done: 1 IP address (1 host up) scanned in 0.10 seconds
+[exit=0, esperado=0]
+
+## SSH filtrado na WAN após monitoramento
+$ docker compose -f shozz-infra-lab/infraestrutura/docker-compose.yml exec -T cliente-wan nmap -sT -n -Pn --max-retries 1 --reason -p 2222 10.20.20.1
+Starting Nmap 7.97 ( https://nmap.org ) at 2026-11-25 00:02 +0000
+Nmap scan report for 10.20.20.1
+Host is up, received user-set.
+
+PORT     STATE    SERVICE      REASON
+2222/tcp filtered EtherNetIP-1 no-response
+
+Nmap done: 1 IP address (1 host up) scanned in 2.09 seconds
+[exit=0, esperado=0]
+
+## Configuração SSH continua válida
+$ docker compose -f shozz-infra-lab/infraestrutura/docker-compose.yml exec -T ubuntu-router /usr/sbin/sshd -t
+
+[exit=0, esperado=0]
+
+## Regras ativas após monitoramento
+$ docker compose -f shozz-infra-lab/infraestrutura/docker-compose.yml exec -T ubuntu-router iptables -S
+-P INPUT DROP
+-P FORWARD DROP
+-P OUTPUT ACCEPT
+-N SHOZZ_FORWARD_DENY
+-N SHOZZ_INPUT_DENY
+-N SHOZZ_SSH
+-N SHOZZ_SSH_RATE
+-A INPUT -i lo -j ACCEPT
+-A INPUT -m conntrack --ctstate INVALID -j DROP
+-A INPUT ! -s 10.10.10.0/24 -i eth0 -j SHOZZ_INPUT_DENY
+-A INPUT ! -s 10.20.20.0/24 -i eth1 -j SHOZZ_INPUT_DENY
+-A INPUT -p tcp -m tcp --dport 2222 -j SHOZZ_SSH
+-A INPUT -s 10.10.10.10/32 -d 10.10.10.1/32 -i eth0 -p icmp -m icmp --icmp-type 8 -m hashlimit --hashlimit-upto 3/sec --hashlimit-burst 5 --hashlimit-mode srcip --hashlimit-name shozz_icmp_in -j ACCEPT
+-A INPUT -p icmp -m icmp --icmp-type 8 -j SHOZZ_INPUT_DENY
+-A INPUT -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
+-A INPUT -j SHOZZ_INPUT_DENY
+-A FORWARD -m conntrack --ctstate INVALID -j DROP
+-A FORWARD ! -s 10.10.10.0/24 -i eth0 -j SHOZZ_FORWARD_DENY
+-A FORWARD ! -s 10.20.20.0/24 -i eth1 -j SHOZZ_FORWARD_DENY
+-A FORWARD -s 10.10.10.10/32 -d 10.20.20.10/32 -i eth0 -o eth1 -p icmp -m icmp --icmp-type 8 -m hashlimit --hashlimit-upto 3/sec --hashlimit-burst 5 --hashlimit-mode srcip --hashlimit-name shozz_icmp_fwd -j ACCEPT
+-A FORWARD -p icmp -m icmp --icmp-type 8 -j SHOZZ_FORWARD_DENY
+-A FORWARD -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
+-A FORWARD -j SHOZZ_FORWARD_DENY
+-A SHOZZ_FORWARD_DENY -m limit --limit 4/min --limit-burst 4 -j LOG --log-prefix "shozz forward drop " --log-level 6
+-A SHOZZ_FORWARD_DENY -j DROP
+-A SHOZZ_INPUT_DENY -m limit --limit 4/min --limit-burst 4 -j LOG --log-prefix "shozz input drop " --log-level 6
+-A SHOZZ_INPUT_DENY -j DROP
+-A SHOZZ_SSH ! -i eth0 -j SHOZZ_INPUT_DENY
+-A SHOZZ_SSH ! -d 10.10.10.1/32 -j SHOZZ_INPUT_DENY
+-A SHOZZ_SSH -s 10.10.10.10/32 -m conntrack --ctstate ESTABLISHED -j ACCEPT
+-A SHOZZ_SSH -s 10.10.10.254/32 -m conntrack --ctstate ESTABLISHED -j ACCEPT
+-A SHOZZ_SSH -s 10.10.10.10/32 -p tcp -m tcp --tcp-flags FIN,SYN,RST,ACK SYN -m conntrack --ctstate NEW -j SHOZZ_SSH_RATE
+-A SHOZZ_SSH -s 10.10.10.254/32 -p tcp -m tcp --tcp-flags FIN,SYN,RST,ACK SYN -m conntrack --ctstate NEW -j SHOZZ_SSH_RATE
+-A SHOZZ_SSH -j SHOZZ_INPUT_DENY
+-A SHOZZ_SSH_RATE -m hashlimit --hashlimit-upto 12/min --hashlimit-burst 4 --hashlimit-mode srcip --hashlimit-name shozz_ssh_new -j ACCEPT
+-A SHOZZ_SSH_RATE -m limit --limit 4/min --limit-burst 4 -j LOG --log-prefix "shozz ssh rate " --log-level 6
+-A SHOZZ_SSH_RATE -j DROP
+[exit=0, esperado=0]
+[validado: mesmo iptables -S antes e depois]
+
+## Contêineres após monitoramento
+$ docker inspect --format '{{.Name}} {{.Id}}' shozz-ubuntu-router shozz-cliente-lan shozz-cliente-wan
+/shozz-ubuntu-router 45fc6757f4f007497f6a4919379a48f917437ada5df385c3b7b4027fdaa60c6d
+/shozz-cliente-lan 6dc706e6e2722fdb69463fdcd864d89f2c197d7a630b9efa2de79d2fbb6ac4b6
+/shozz-cliente-wan d1fbb7412e5010175d22782906a31e1652bcce0357146ec1b03c30baf7da0c02
+[exit=0, esperado=0]
+[validado: os três IDs permaneceram iguais]
+
+## Estado final dos serviços
+$ docker compose -f shozz-infra-lab/infraestrutura/docker-compose.yml ps
+NAME                  IMAGE                           COMMAND                  SERVICE         CREATED             STATUS             PORTS
+shozz-cliente-lan     alpine:3.22                     "sh -c 'ip route rep…"   cliente-lan     About an hour ago   Up About an hour
+shozz-cliente-wan     alpine:3.22                     "sh -c 'ip route rep…"   cliente-wan     About an hour ago   Up About an hour
+shozz-ubuntu-router   shozz-infra-lab-ubuntu-router   "/usr/local/sbin/sho…"   ubuntu-router   About an hour ago   Up 55 minutes      2222/tcp
+[exit=0, esperado=0]
+
+## Nomes dos serviços em execução
+$ docker compose -f shozz-infra-lab/infraestrutura/docker-compose.yml ps --services --status running
+cliente-lan
+cliente-wan
+ubuntu-router
+[exit=0, esperado=0]
+VALIDACAO INTEGRADA CONCLUIDA

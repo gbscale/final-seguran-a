@@ -1,0 +1,4 @@
+criptografia/*.sh text eol=lf
+criptografia/exemplos/*.ini text eol=lf
+integridade/*.sh text eol=lf
+evidencias/criptografia/exportacoes/*.asc text eol=lf
