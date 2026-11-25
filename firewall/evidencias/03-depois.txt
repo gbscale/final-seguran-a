@@ -1,0 +1,195 @@
+Data e hora (America/Sao_Paulo): 2026-11-24 20:05:53 -03:00
+
+## Contêineres com firewall
+$ docker compose ps
+NAME                  IMAGE                           COMMAND                  SERVICE         CREATED          STATUS          PORTS
+shozz-cliente-lan     alpine:3.22                     "sh -c 'ip route rep…"   cliente-lan     18 minutes ago   Up 18 minutes
+shozz-cliente-wan     alpine:3.22                     "sh -c 'ip route rep…"   cliente-wan     18 minutes ago   Up 18 minutes
+shozz-ubuntu-router   shozz-infra-lab-ubuntu-router   "/usr/local/sbin/sho…"   ubuntu-router   3 minutes ago    Up 3 minutes    2222/tcp
+[exit=0, esperado=0]
+
+## Rotas do roteador e encaminhamento IPv4
+$ docker compose exec -T ubuntu-router sh -c 'ip -4 route; cat /proc/sys/net/ipv4/ip_forward'
+default via 10.10.10.254 dev eth0
+10.10.10.0/24 dev eth0 proto kernel scope link src 10.10.10.1
+10.20.20.0/24 dev eth1 proto kernel scope link src 10.20.20.1
+1
+[exit=0, esperado=0]
+
+## Rota da LAN
+$ docker compose exec -T cliente-lan ip route get 10.20.20.10
+10.20.20.10 via 10.10.10.1 dev eth0  src 10.10.10.10
+[exit=0, esperado=0]
+
+## Rota da WAN
+$ docker compose exec -T cliente-wan ip route get 10.10.10.10
+10.10.10.10 via 10.20.20.1 dev eth0  src 10.20.20.10
+[exit=0, esperado=0]
+
+## LAN para o roteador, ping permitido
+$ docker compose exec -T cliente-lan ping -c 2 -W 1 10.10.10.1
+PING 10.10.10.1 (10.10.10.1): 56 data bytes
+64 bytes from 10.10.10.1: seq=0 ttl=64 time=2.859 ms
+64 bytes from 10.10.10.1: seq=1 ttl=64 time=0.156 ms
+
+--- 10.10.10.1 ping statistics ---
+2 packets transmitted, 2 packets received, 0% packet loss
+round-trip min/avg/max = 0.156/1.507/2.859 ms
+[exit=0, esperado=0]
+
+## LAN para WAN, ping e retorno permitidos
+$ docker compose exec -T cliente-lan ping -c 2 -W 1 10.20.20.10
+PING 10.20.20.10 (10.20.20.10): 56 data bytes
+64 bytes from 10.20.20.10: seq=0 ttl=63 time=2.278 ms
+64 bytes from 10.20.20.10: seq=1 ttl=63 time=0.139 ms
+
+--- 10.20.20.10 ping statistics ---
+2 packets transmitted, 2 packets received, 0% packet loss
+round-trip min/avg/max = 0.139/1.208/2.278 ms
+[exit=0, esperado=0]
+
+## WAN para roteador, ping bloqueado
+$ docker compose exec -T cliente-wan ping -c 2 -W 1 10.20.20.1
+PING 10.20.20.1 (10.20.20.1): 56 data bytes
+
+--- 10.20.20.1 ping statistics ---
+2 packets transmitted, 0 packets received, 100% packet loss
+[exit=1, esperado=1]
+
+## WAN para LAN, ping iniciado na WAN bloqueado
+$ docker compose exec -T cliente-wan ping -c 2 -W 1 10.10.10.10
+PING 10.10.10.10 (10.10.10.10): 56 data bytes
+
+--- 10.10.10.10 ping statistics ---
+2 packets transmitted, 0 packets received, 100% packet loss
+[exit=1, esperado=1]
+
+## Nmap LAN para endereço administrativo do roteador
+$ docker compose exec -T cliente-lan nmap -sT -n -Pn --reason --max-retries 1 -p 22,80,2222 10.10.10.1
+Starting Nmap 7.97 ( https://nmap.org ) at 2026-11-24 23:06 +0000
+Nmap scan report for 10.10.10.1
+Host is up, received user-set (0.000018s latency).
+
+PORT     STATE    SERVICE      REASON
+22/tcp   filtered ssh          no-response
+80/tcp   filtered http         no-response
+2222/tcp open     EtherNetIP-1 syn-ack
+
+Nmap done: 1 IP address (1 host up) scanned in 1.27 seconds
+[exit=0, esperado=0]
+[validado: (?m)^2222/tcp\s+open\b]
+[validado: (?m)^22/tcp\s+filtered\b|2 filtered tcp ports]
+
+## Nmap WAN para endereço WAN do roteador
+$ docker compose exec -T cliente-wan nmap -sT -n -Pn --reason --max-retries 1 -p 22,80,2222 10.20.20.1
+Starting Nmap 7.97 ( https://nmap.org ) at 2026-11-24 23:06 +0000
+Nmap scan report for 10.20.20.1
+Host is up, received user-set.
+
+PORT     STATE    SERVICE      REASON
+22/tcp   filtered ssh          no-response
+80/tcp   filtered http         no-response
+2222/tcp filtered EtherNetIP-1 no-response
+
+Nmap done: 1 IP address (1 host up) scanned in 3.07 seconds
+[exit=0, esperado=0]
+[validado: (?m)^2222/tcp\s+filtered\b|3 filtered tcp ports]
+
+## Nmap WAN para endereço administrativo LAN do roteador
+$ docker compose exec -T cliente-wan nmap -sT -n -Pn --reason --max-retries 1 -p 2222 10.10.10.1
+Starting Nmap 7.97 ( https://nmap.org ) at 2026-11-24 23:06 +0000
+Nmap scan report for 10.10.10.1
+Host is up, received user-set.
+
+PORT     STATE    SERVICE      REASON
+2222/tcp filtered EtherNetIP-1 no-response
+
+Nmap done: 1 IP address (1 host up) scanned in 2.03 seconds
+[exit=0, esperado=0]
+[validado: (?m)^2222/tcp\s+filtered\b]
+
+## Nmap WAN para porta 8080 do cliente LAN
+$ docker compose exec -T cliente-wan nmap -sT -n -Pn --reason --max-retries 1 -p 8080 10.10.10.10
+Starting Nmap 7.97 ( https://nmap.org ) at 2026-11-24 23:06 +0000
+Nmap scan report for 10.10.10.10
+Host is up, received user-set.
+
+PORT     STATE    SERVICE    REASON
+8080/tcp filtered http-proxy no-response
+
+Nmap done: 1 IP address (1 host up) scanned in 2.03 seconds
+[exit=0, esperado=0]
+[validado: (?m)^8080/tcp\s+filtered\b]
+
+## Políticas e contadores em todas as cadeias
+$ docker compose exec -T ubuntu-router shozz-firewall status
+Chain INPUT (policy DROP 0 packets, 0 bytes)
+num   pkts bytes target     prot opt in     out     source               destination
+1        0     0 ACCEPT     0    --  lo     *       0.0.0.0/0            0.0.0.0/0
+2        0     0 DROP       0    --  *      *       0.0.0.0/0            0.0.0.0/0            ctstate INVALID
+3        0     0 SHOZZ_INPUT_DENY  0    --  eth0   *      !10.10.10.0/24        0.0.0.0/0
+4        0     0 SHOZZ_INPUT_DENY  0    --  eth1   *      !10.20.20.0/24        0.0.0.0/0
+5        8   464 SHOZZ_SSH  6    --  *      *       0.0.0.0/0            0.0.0.0/0            tcp dpt:2222
+6        2   168 ACCEPT     1    --  eth0   *       10.10.10.10          10.10.10.1           icmptype 8 limit: up to 3/sec burst 5 mode srcip
+7        2   168 SHOZZ_INPUT_DENY  1    --  *      *       0.0.0.0/0            0.0.0.0/0            icmptype 8
+8        0     0 ACCEPT     0    --  *      *       0.0.0.0/0            0.0.0.0/0            ctstate RELATED,ESTABLISHED
+9       11   660 SHOZZ_INPUT_DENY  0    --  *      *       0.0.0.0/0            0.0.0.0/0
+
+Chain FORWARD (policy DROP 0 packets, 0 bytes)
+num   pkts bytes target     prot opt in     out     source               destination
+1        0     0 DROP       0    --  *      *       0.0.0.0/0            0.0.0.0/0            ctstate INVALID
+2        0     0 SHOZZ_FORWARD_DENY  0    --  eth0   *      !10.10.10.0/24        0.0.0.0/0
+3        0     0 SHOZZ_FORWARD_DENY  0    --  eth1   *      !10.20.20.0/24        0.0.0.0/0
+4        2   168 ACCEPT     1    --  eth0   eth1    10.10.10.10          10.20.20.10          icmptype 8 limit: up to 3/sec burst 5 mode srcip
+5        2   168 SHOZZ_FORWARD_DENY  1    --  *      *       0.0.0.0/0            0.0.0.0/0            icmptype 8
+6        2   168 ACCEPT     0    --  *      *       0.0.0.0/0            0.0.0.0/0            ctstate RELATED,ESTABLISHED
+7        2   120 SHOZZ_FORWARD_DENY  0    --  *      *       0.0.0.0/0            0.0.0.0/0
+
+Chain OUTPUT (policy ACCEPT 3 packets, 228 bytes)
+num   pkts bytes target     prot opt in     out     source               destination
+
+Chain SHOZZ_FORWARD_DENY (4 references)
+num   pkts bytes target     prot opt in     out     source               destination
+1        4   288 LOG        0    --  *      *       0.0.0.0/0            0.0.0.0/0            limit: avg 4/min burst 4 LOG flags 0 level 6 prefix "shozz forward drop "
+2        4   288 DROP       0    --  *      *       0.0.0.0/0            0.0.0.0/0
+
+Chain SHOZZ_INPUT_DENY (7 references)
+num   pkts bytes target     prot opt in     out     source               destination
+1        4   288 LOG        0    --  *      *       0.0.0.0/0            0.0.0.0/0            limit: avg 4/min burst 4 LOG flags 0 level 6 prefix "shozz input drop "
+2       18  1128 DROP       0    --  *      *       0.0.0.0/0            0.0.0.0/0
+
+Chain SHOZZ_SSH (1 references)
+num   pkts bytes target     prot opt in     out     source               destination
+1        5   300 SHOZZ_INPUT_DENY  0    --  !eth0  *       0.0.0.0/0            0.0.0.0/0
+2        0     0 SHOZZ_INPUT_DENY  0    --  *      *       0.0.0.0/0           !10.10.10.1
+3        2   104 ACCEPT     0    --  *      *       10.10.10.10          0.0.0.0/0            ctstate ESTABLISHED
+4        0     0 ACCEPT     0    --  *      *       10.10.10.254         0.0.0.0/0            ctstate ESTABLISHED
+5        1    60 SHOZZ_SSH_RATE  6    --  *      *       10.10.10.10          0.0.0.0/0            tcp flags:0x17/0x02 ctstate NEW
+6        0     0 SHOZZ_SSH_RATE  6    --  *      *       10.10.10.254         0.0.0.0/0            tcp flags:0x17/0x02 ctstate NEW
+7        0     0 SHOZZ_INPUT_DENY  0    --  *      *       0.0.0.0/0            0.0.0.0/0
+
+Chain SHOZZ_SSH_RATE (2 references)
+num   pkts bytes target     prot opt in     out     source               destination
+1        1    60 ACCEPT     0    --  *      *       0.0.0.0/0            0.0.0.0/0            limit: up to 12/min burst 4 mode srcip
+2        0     0 LOG        0    --  *      *       0.0.0.0/0            0.0.0.0/0            limit: avg 4/min burst 4 LOG flags 0 level 6 prefix "shozz ssh rate "
+3        0     0 DROP       0    --  *      *       0.0.0.0/0            0.0.0.0/0
+[exit=0, esperado=0]
+[validado: (?m)^Chain INPUT \(policy DROP]
+[validado: (?m)^Chain FORWARD \(policy DROP]
+
+## Contadores de descarte INPUT
+$ docker compose exec -T ubuntu-router iptables -nvxL SHOZZ_INPUT_DENY
+Chain SHOZZ_INPUT_DENY (7 references)
+    pkts      bytes target     prot opt in     out     source               destination
+       4      288 LOG        0    --  *      *       0.0.0.0/0            0.0.0.0/0            limit: avg 4/min burst 4 LOG flags 0 level 6 prefix "shozz input drop "
+      18     1128 DROP       0    --  *      *       0.0.0.0/0            0.0.0.0/0
+[exit=0, esperado=0]
+
+## Contadores de descarte FORWARD
+$ docker compose exec -T ubuntu-router iptables -nvxL SHOZZ_FORWARD_DENY
+Chain SHOZZ_FORWARD_DENY (4 references)
+    pkts      bytes target     prot opt in     out     source               destination
+       4      288 LOG        0    --  *      *       0.0.0.0/0            0.0.0.0/0            limit: avg 4/min burst 4 LOG flags 0 level 6 prefix "shozz forward drop "
+       4      288 DROP       0    --  *      *       0.0.0.0/0            0.0.0.0/0
+[exit=0, esperado=0]
+[validado: houve descarte tanto em INPUT quanto em FORWARD]

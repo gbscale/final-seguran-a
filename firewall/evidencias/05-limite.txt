@@ -1,0 +1,47 @@
+Data e hora (America/Sao_Paulo): 2026-11-24 20:06:19 -03:00
+Espera de 21 segundos para repor os quatro créditos da origem LAN.
+
+## Contadores do limite SSH antes da medição
+$ docker compose exec -T ubuntu-router iptables -nvxL SHOZZ_SSH_RATE
+Chain SHOZZ_SSH_RATE (2 references)
+    pkts      bytes target     prot opt in     out     source               destination
+       2      120 ACCEPT     0    --  *      *       0.0.0.0/0            0.0.0.0/0            limit: up to 12/min burst 4 mode srcip
+       0        0 LOG        0    --  *      *       0.0.0.0/0            0.0.0.0/0            limit: avg 4/min burst 4 LOG flags 0 level 6 prefix "shozz ssh rate "
+       0        0 DROP       0    --  *      *       0.0.0.0/0            0.0.0.0/0
+[exit=0, esperado=0]
+
+## Seis verificações TCP pequenas da LAN para a única porta 2222
+$ docker compose exec -T cliente-lan sh -c 'for i in 1 2 3 4 5 6; do (nmap -sT -n -Pn --max-retries 0 --initial-rtt-timeout 500ms --host-timeout 5s -p 2222 -oG - 10.10.10.1 | grep Ports:) & done; wait'
+Host: 10.10.10.1 ()	Ports: 2222/open/tcp//EtherNetIP-1///
+Host: 10.10.10.1 ()	Ports: 2222/open/tcp//EtherNetIP-1///
+Host: 10.10.10.1 ()	Ports: 2222/open/tcp//EtherNetIP-1///
+Host: 10.10.10.1 ()	Ports: 2222/open/tcp//EtherNetIP-1///
+Host: 10.10.10.1 ()	Ports: 2222/filtered/tcp//EtherNetIP-1///
+Host: 10.10.10.1 ()	Ports: 2222/filtered/tcp//EtherNetIP-1///
+[exit=0, esperado=0]
+[validado: 2222/open/tcp]
+[validado: 2222/filtered/tcp]
+
+## Contadores do limite SSH depois da medição
+$ docker compose exec -T ubuntu-router iptables -nvxL SHOZZ_SSH_RATE
+Chain SHOZZ_SSH_RATE (2 references)
+    pkts      bytes target     prot opt in     out     source               destination
+       6      360 ACCEPT     0    --  *      *       0.0.0.0/0            0.0.0.0/0            limit: up to 12/min burst 4 mode srcip
+       2      120 LOG        0    --  *      *       0.0.0.0/0            0.0.0.0/0            limit: avg 4/min burst 4 LOG flags 0 level 6 prefix "shozz ssh rate "
+       2      120 DROP       0    --  *      *       0.0.0.0/0            0.0.0.0/0
+[exit=0, esperado=0]
+Delta de pacotes na cadeia de limite: ACCEPT=4, DROP=2
+Espera de 6 segundos para repor pelo menos um crédito.
+
+## Porta SSH volta a aceitar novas conexões após reposição
+$ docker compose exec -T cliente-lan nmap -sT -n -Pn --reason --max-retries 0 -p 2222 10.10.10.1
+Starting Nmap 7.97 ( https://nmap.org ) at 2026-11-24 23:06 +0000
+Nmap scan report for 10.10.10.1
+Host is up, received user-set (0.000027s latency).
+
+PORT     STATE SERVICE      REASON
+2222/tcp open  EtherNetIP-1 syn-ack
+
+Nmap done: 1 IP address (1 host up) scanned in 0.03 seconds
+[exit=0, esperado=0]
+[validado: (?m)^2222/tcp\s+open\b]

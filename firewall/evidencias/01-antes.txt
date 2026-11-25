@@ -1,0 +1,159 @@
+Data e hora (America/Sao_Paulo): 2026-11-24 19:59:24 -03:00
+
+## Versão do Docker
+$ docker version --format 'Client={{.Client.Version}} Server={{.Server.Version}} OS={{.Server.Os}}'
+Client=29.2.1 Server=29.2.1 OS=linux
+[exit=0, esperado=0]
+
+## Versão do Compose
+$ docker compose version
+Docker Compose version v5.0.2
+[exit=0, esperado=0]
+
+## Contêineres antes da aplicação
+$ docker compose ps --all
+NAME                  IMAGE                                                                     COMMAND                  SERVICE         CREATED          STATUS          PORTS
+shozz-cliente-lan     alpine:3.22                                                               "sh -c 'ip route rep…"   cliente-lan     11 minutes ago   Up 11 minutes
+shozz-cliente-wan     alpine:3.22                                                               "sh -c 'ip route rep…"   cliente-wan     11 minutes ago   Up 11 minutes
+shozz-ubuntu-router   sha256:f38d2685666d9e1fba6383b9c169390843d8edc4318b3eaca9f6289d786e5932   "/usr/local/sbin/sho…"   ubuntu-router   11 minutes ago   Up 8 minutes    2222/tcp
+[exit=0, esperado=0]
+
+## Redes de laboratório
+$ docker network inspect shozz_lan shozz_wan --format '{{.Name}} IPv6={{.EnableIPv6}} {{range .IPAM.Config}}{{.Subnet}} gateway={{.Gateway}}{{end}}'
+shozz_lan IPv6=false 10.10.10.0/24 gateway=10.10.10.254
+shozz_wan IPv6=false 10.20.20.0/24 gateway=10.20.20.254
+[exit=0, esperado=0]
+
+## Interfaces, rotas, encaminhamento e escuta do roteador original
+$ docker compose exec -T ubuntu-router sh -c 'ip -br -4 address; ip -4 route; cat /proc/sys/net/ipv4/ip_forward; ss -ltn; command -v iptables || echo iptables-ausente'
+lo               UNKNOWN        127.0.0.1/8
+eth0@if115       UP             10.10.10.1/24
+eth1@if116       UP             10.20.20.1/24
+default via 10.10.10.254 dev eth0
+10.10.10.0/24 dev eth0 proto kernel scope link src 10.10.10.1
+10.20.20.0/24 dev eth1 proto kernel scope link src 10.20.20.1
+1
+State  Recv-Q Send-Q Local Address:Port  Peer Address:PortProcess
+LISTEN 0      4096      127.0.0.11:39001      0.0.0.0:*
+LISTEN 0      128          0.0.0.0:2222       0.0.0.0:*
+iptables-ausente
+[exit=0, esperado=0]
+
+## Rota LAN para WAN
+$ docker compose exec -T cliente-lan ip route get 10.20.20.10
+10.20.20.10 via 10.10.10.1 dev eth0  src 10.10.10.10
+[exit=0, esperado=0]
+
+## Rota WAN para LAN
+$ docker compose exec -T cliente-wan ip route get 10.10.10.10
+10.10.10.10 via 10.20.20.1 dev eth0  src 10.20.20.10
+[exit=0, esperado=0]
+
+## Pacotes de teste na LAN
+$ docker compose exec -T cliente-lan apk add --no-cache nmap openssh-client
+fetch https://dl-cdn.alpinelinux.org/alpine/v3.22/main/x86_64/APKINDEX.tar.gz
+fetch https://dl-cdn.alpinelinux.org/alpine/v3.22/community/x86_64/APKINDEX.tar.gz
+(1/12) Installing libgcc (14.2.0-r6)
+(2/12) Installing lua5.4-libs (5.4.7-r0)
+(3/12) Installing libpcap (1.10.7-r0)
+(4/12) Installing libssh2 (1.11.1-r3)
+(5/12) Installing libstdc++ (14.2.0-r6)
+(6/12) Installing nmap (7.97-r0)
+(7/12) Installing openssh-keygen (10.0_p1-r11)
+(8/12) Installing ncurses-terminfo-base (6.5_p20250503-r0)
+(9/12) Installing libncursesw (6.5_p20250503-r0)
+(10/12) Installing libedit (20250104.3.1-r1)
+(11/12) Installing openssh-client-common (10.0_p1-r11)
+(12/12) Installing openssh-client-default (10.0_p1-r11)
+Executing busybox-1.37.0-r20.trigger
+OK: 28 MiB in 28 packages
+[exit=0, esperado=0]
+
+## Pacote de teste na WAN
+$ docker compose exec -T cliente-wan apk add --no-cache nmap
+fetch https://dl-cdn.alpinelinux.org/alpine/v3.22/main/x86_64/APKINDEX.tar.gz
+fetch https://dl-cdn.alpinelinux.org/alpine/v3.22/community/x86_64/APKINDEX.tar.gz
+(1/6) Installing libgcc (14.2.0-r6)
+(2/6) Installing lua5.4-libs (5.4.7-r0)
+(3/6) Installing libpcap (1.10.7-r0)
+(4/6) Installing libssh2 (1.11.1-r3)
+(5/6) Installing libstdc++ (14.2.0-r6)
+(6/6) Installing nmap (7.97-r0)
+Executing busybox-1.37.0-r20.trigger
+OK: 23 MiB in 22 packages
+[exit=0, esperado=0]
+
+## Versão do Nmap
+$ docker compose exec -T cliente-lan nmap --version
+Nmap version 7.97 ( https://nmap.org )
+Platform: x86_64-alpine-linux-musl
+Compiled with: liblua-5.4.7 openssl-3.5.9 libssh2-1.11.1 libz-1.3.1 nmap-libpcre2-10.45 libpcap-1.10.7 nmap-libdnet-1.18.0 ipv6
+Compiled without:
+Available nsock engines: epoll poll select
+[exit=0, esperado=0]
+
+## LAN para WAN, ping
+$ docker compose exec -T cliente-lan ping -c 2 -W 1 10.20.20.10
+PING 10.20.20.10 (10.20.20.10): 56 data bytes
+64 bytes from 10.20.20.10: seq=0 ttl=63 time=1.947 ms
+64 bytes from 10.20.20.10: seq=1 ttl=63 time=0.145 ms
+
+--- 10.20.20.10 ping statistics ---
+2 packets transmitted, 2 packets received, 0% packet loss
+round-trip min/avg/max = 0.145/1.046/1.947 ms
+[exit=0, esperado=0]
+
+## WAN para LAN, ping
+$ docker compose exec -T cliente-wan ping -c 2 -W 1 10.10.10.10
+PING 10.10.10.10 (10.10.10.10): 56 data bytes
+64 bytes from 10.10.10.10: seq=0 ttl=63 time=0.185 ms
+64 bytes from 10.10.10.10: seq=1 ttl=63 time=0.223 ms
+
+--- 10.10.10.10 ping statistics ---
+2 packets transmitted, 2 packets received, 0% packet loss
+round-trip min/avg/max = 0.185/0.204/0.223 ms
+[exit=0, esperado=0]
+
+## LAN para SSH do roteador
+$ docker compose exec -T cliente-lan nmap -sT -n -Pn --reason --max-retries 1 -p 22,80,2222 10.10.10.1
+Starting Nmap 7.97 ( https://nmap.org ) at 2026-11-24 22:59 +0000
+Nmap scan report for 10.10.10.1
+Host is up, received user-set (0.00013s latency).
+
+PORT     STATE  SERVICE      REASON
+22/tcp   closed ssh          conn-refused
+80/tcp   closed http         conn-refused
+2222/tcp open   EtherNetIP-1 syn-ack
+
+Nmap done: 1 IP address (1 host up) scanned in 0.03 seconds
+[exit=0, esperado=0]
+[validado: (?m)^2222/tcp\s+open\b]
+[validado: (?m)^22/tcp\s+closed\b]
+
+## WAN para SSH do roteador
+$ docker compose exec -T cliente-wan nmap -sT -n -Pn --reason --max-retries 1 -p 22,80,2222 10.20.20.1
+Starting Nmap 7.97 ( https://nmap.org ) at 2026-11-24 22:59 +0000
+Nmap scan report for 10.20.20.1
+Host is up, received user-set (0.00015s latency).
+
+PORT     STATE  SERVICE      REASON
+22/tcp   closed ssh          conn-refused
+80/tcp   closed http         conn-refused
+2222/tcp open   EtherNetIP-1 syn-ack
+
+Nmap done: 1 IP address (1 host up) scanned in 0.03 seconds
+[exit=0, esperado=0]
+[validado: (?m)^2222/tcp\s+open\b]
+
+## WAN para porta 8080 do cliente LAN, sem serviço de escuta
+$ docker compose exec -T cliente-wan nmap -sT -n -Pn --reason --max-retries 1 -p 8080 10.10.10.10
+Starting Nmap 7.97 ( https://nmap.org ) at 2026-11-24 22:59 +0000
+Nmap scan report for 10.10.10.10
+Host is up, received user-set (0.000013s latency).
+
+PORT     STATE  SERVICE    REASON
+8080/tcp closed http-proxy conn-refused
+
+Nmap done: 1 IP address (1 host up) scanned in 0.03 seconds
+[exit=0, esperado=0]
+[validado: (?m)^8080/tcp\s+closed\b]

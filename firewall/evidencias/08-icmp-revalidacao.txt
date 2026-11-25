@@ -1,0 +1,147 @@
+Data e hora (America/Sao_Paulo): 2026-11-24 20:11:05 -03:00
+
+## Configuração efetiva do OpenSSH no roteador
+$ docker compose exec -T ubuntu-router sh -c '/usr/sbin/sshd -T | grep -E ''^(port|permitrootlogin|passwordauthentication|kbdinteractiveauthentication|authenticationmethods|allowusers) '''
+port 2222
+permitrootlogin no
+passwordauthentication no
+kbdinteractiveauthentication no
+allowusers ubuntu
+authenticationmethods publickey
+[exit=0, esperado=0]
+[validado: (?m)^port 2222\s*$]
+[validado: (?m)^permitrootlogin no\s*$]
+[validado: (?m)^passwordauthentication no\s*$]
+[validado: (?m)^kbdinteractiveauthentication no\s*$]
+[validado: (?m)^allowusers ubuntu\s*$]
+[validado: (?m)^authenticationmethods publickey\s*$]
+
+## INPUT antes do teste ICMP
+$ docker compose exec -T ubuntu-router iptables -nvxL INPUT
+Chain INPUT (policy DROP 0 packets, 0 bytes)
+    pkts      bytes target     prot opt in     out     source               destination
+       0        0 ACCEPT     0    --  lo     *       0.0.0.0/0            0.0.0.0/0
+       0        0 DROP       0    --  *      *       0.0.0.0/0            0.0.0.0/0            ctstate INVALID
+       0        0 SHOZZ_INPUT_DENY  0    --  eth0   *      !10.10.10.0/24        0.0.0.0/0
+       0        0 SHOZZ_INPUT_DENY  0    --  eth1   *      !10.20.20.0/24        0.0.0.0/0
+       2      120 SHOZZ_SSH  6    --  *      *       0.0.0.0/0            0.0.0.0/0            tcp dpt:2222
+       5      420 ACCEPT     1    --  eth0   *       10.10.10.10          10.10.10.1           icmptype 8 limit: up to 3/sec burst 5 mode srcip
+       2      168 SHOZZ_INPUT_DENY  1    --  *      *       0.0.0.0/0            0.0.0.0/0            icmptype 8
+       0        0 ACCEPT     0    --  *      *       0.0.0.0/0            0.0.0.0/0            ctstate RELATED,ESTABLISHED
+       0        0 SHOZZ_INPUT_DENY  0    --  *      *       0.0.0.0/0            0.0.0.0/0
+[exit=0, esperado=0]
+
+## INPUT contadores de descarte antes do teste
+$ docker compose exec -T ubuntu-router iptables -nvxL SHOZZ_INPUT_DENY
+Chain SHOZZ_INPUT_DENY (7 references)
+    pkts      bytes target     prot opt in     out     source               destination
+       4      288 LOG        0    --  *      *       0.0.0.0/0            0.0.0.0/0            limit: avg 4/min burst 4 LOG flags 0 level 6 prefix "shozz input drop "
+       4      288 DROP       0    --  *      *       0.0.0.0/0            0.0.0.0/0
+[exit=0, esperado=0]
+
+## INPUT com sete pedidos ICMP ao destino autorizado
+$ docker compose exec -T cliente-lan sh -c 'ping -c 7 -i 0.02 -w 3 10.10.10.1; rc=$?; echo ping_exit=$rc'
+PING 10.10.10.1 (10.10.10.1): 56 data bytes
+64 bytes from 10.10.10.1: seq=0 ttl=64 time=0.386 ms
+64 bytes from 10.10.10.1: seq=1 ttl=64 time=0.141 ms
+64 bytes from 10.10.10.1: seq=2 ttl=64 time=0.180 ms
+64 bytes from 10.10.10.1: seq=3 ttl=64 time=0.116 ms
+64 bytes from 10.10.10.1: seq=4 ttl=64 time=0.165 ms
+
+--- 10.10.10.1 ping statistics ---
+7 packets transmitted, 5 packets received, 28% packet loss
+round-trip min/avg/max = 0.116/0.197/0.386 ms
+ping_exit=1
+[exit=0, esperado=0]
+[validado: (?m)^7 packets transmitted, [1-6]( packets)? received]
+
+## INPUT depois do teste ICMP
+$ docker compose exec -T ubuntu-router iptables -nvxL INPUT
+Chain INPUT (policy DROP 0 packets, 0 bytes)
+    pkts      bytes target     prot opt in     out     source               destination
+       0        0 ACCEPT     0    --  lo     *       0.0.0.0/0            0.0.0.0/0
+       0        0 DROP       0    --  *      *       0.0.0.0/0            0.0.0.0/0            ctstate INVALID
+       0        0 SHOZZ_INPUT_DENY  0    --  eth0   *      !10.10.10.0/24        0.0.0.0/0
+       0        0 SHOZZ_INPUT_DENY  0    --  eth1   *      !10.20.20.0/24        0.0.0.0/0
+       2      120 SHOZZ_SSH  6    --  *      *       0.0.0.0/0            0.0.0.0/0            tcp dpt:2222
+      10      840 ACCEPT     1    --  eth0   *       10.10.10.10          10.10.10.1           icmptype 8 limit: up to 3/sec burst 5 mode srcip
+       4      336 SHOZZ_INPUT_DENY  1    --  *      *       0.0.0.0/0            0.0.0.0/0            icmptype 8
+       0        0 ACCEPT     0    --  *      *       0.0.0.0/0            0.0.0.0/0            ctstate RELATED,ESTABLISHED
+       0        0 SHOZZ_INPUT_DENY  0    --  *      *       0.0.0.0/0            0.0.0.0/0
+[exit=0, esperado=0]
+
+## INPUT contadores de descarte depois do teste
+$ docker compose exec -T ubuntu-router iptables -nvxL SHOZZ_INPUT_DENY
+Chain SHOZZ_INPUT_DENY (7 references)
+    pkts      bytes target     prot opt in     out     source               destination
+       6      456 LOG        0    --  *      *       0.0.0.0/0            0.0.0.0/0            limit: avg 4/min burst 4 LOG flags 0 level 6 prefix "shozz input drop "
+       6      456 DROP       0    --  *      *       0.0.0.0/0            0.0.0.0/0
+[exit=0, esperado=0]
+Delta ICMP em INPUT: ACCEPT=5, DROP=2
+
+## FORWARD antes do teste ICMP
+$ docker compose exec -T ubuntu-router iptables -nvxL FORWARD
+Chain FORWARD (policy DROP 0 packets, 0 bytes)
+    pkts      bytes target     prot opt in     out     source               destination
+       0        0 DROP       0    --  *      *       0.0.0.0/0            0.0.0.0/0            ctstate INVALID
+       0        0 SHOZZ_FORWARD_DENY  0    --  eth0   *      !10.10.10.0/24        0.0.0.0/0
+       0        0 SHOZZ_FORWARD_DENY  0    --  eth1   *      !10.20.20.0/24        0.0.0.0/0
+       2      168 ACCEPT     1    --  eth0   eth1    10.10.10.10          10.20.20.10          icmptype 8 limit: up to 3/sec burst 5 mode srcip
+       0        0 SHOZZ_FORWARD_DENY  1    --  *      *       0.0.0.0/0            0.0.0.0/0            icmptype 8
+       2      168 ACCEPT     0    --  *      *       0.0.0.0/0            0.0.0.0/0            ctstate RELATED,ESTABLISHED
+       0        0 SHOZZ_FORWARD_DENY  0    --  *      *       0.0.0.0/0            0.0.0.0/0
+[exit=0, esperado=0]
+
+## FORWARD contadores de descarte antes do teste
+$ docker compose exec -T ubuntu-router iptables -nvxL SHOZZ_FORWARD_DENY
+Chain SHOZZ_FORWARD_DENY (4 references)
+    pkts      bytes target     prot opt in     out     source               destination
+       0        0 LOG        0    --  *      *       0.0.0.0/0            0.0.0.0/0            limit: avg 4/min burst 4 LOG flags 0 level 6 prefix "shozz forward drop "
+       0        0 DROP       0    --  *      *       0.0.0.0/0            0.0.0.0/0
+[exit=0, esperado=0]
+
+## FORWARD com sete pedidos ICMP ao destino autorizado
+$ docker compose exec -T cliente-lan sh -c 'ping -c 7 -i 0.02 -w 3 10.20.20.10; rc=$?; echo ping_exit=$rc'
+PING 10.20.20.10 (10.20.20.10): 56 data bytes
+64 bytes from 10.20.20.10: seq=0 ttl=63 time=1.968 ms
+64 bytes from 10.20.20.10: seq=1 ttl=63 time=0.112 ms
+64 bytes from 10.20.20.10: seq=2 ttl=63 time=0.135 ms
+64 bytes from 10.20.20.10: seq=3 ttl=63 time=0.140 ms
+64 bytes from 10.20.20.10: seq=4 ttl=63 time=0.241 ms
+
+--- 10.20.20.10 ping statistics ---
+7 packets transmitted, 5 packets received, 28% packet loss
+round-trip min/avg/max = 0.112/0.519/1.968 ms
+ping_exit=1
+[exit=0, esperado=0]
+[validado: (?m)^7 packets transmitted, [1-6]( packets)? received]
+
+## FORWARD depois do teste ICMP
+$ docker compose exec -T ubuntu-router iptables -nvxL FORWARD
+Chain FORWARD (policy DROP 0 packets, 0 bytes)
+    pkts      bytes target     prot opt in     out     source               destination
+       0        0 DROP       0    --  *      *       0.0.0.0/0            0.0.0.0/0            ctstate INVALID
+       0        0 SHOZZ_FORWARD_DENY  0    --  eth0   *      !10.10.10.0/24        0.0.0.0/0
+       0        0 SHOZZ_FORWARD_DENY  0    --  eth1   *      !10.20.20.0/24        0.0.0.0/0
+       7      588 ACCEPT     1    --  eth0   eth1    10.10.10.10          10.20.20.10          icmptype 8 limit: up to 3/sec burst 5 mode srcip
+       2      168 SHOZZ_FORWARD_DENY  1    --  *      *       0.0.0.0/0            0.0.0.0/0            icmptype 8
+       7      588 ACCEPT     0    --  *      *       0.0.0.0/0            0.0.0.0/0            ctstate RELATED,ESTABLISHED
+       0        0 SHOZZ_FORWARD_DENY  0    --  *      *       0.0.0.0/0            0.0.0.0/0
+[exit=0, esperado=0]
+
+## FORWARD contadores de descarte depois do teste
+$ docker compose exec -T ubuntu-router iptables -nvxL SHOZZ_FORWARD_DENY
+Chain SHOZZ_FORWARD_DENY (4 references)
+    pkts      bytes target     prot opt in     out     source               destination
+       2      168 LOG        0    --  *      *       0.0.0.0/0            0.0.0.0/0            limit: avg 4/min burst 4 LOG flags 0 level 6 prefix "shozz forward drop "
+       2      168 DROP       0    --  *      *       0.0.0.0/0            0.0.0.0/0
+[exit=0, esperado=0]
+Delta ICMP em FORWARD: ACCEPT=5, DROP=2
+
+## Estado final após o teste controlado
+$ docker compose ps
+NAME                  IMAGE                           COMMAND                  SERVICE         CREATED          STATUS          PORTS
+shozz-cliente-lan     alpine:3.22                     "sh -c 'ip route rep…"   cliente-lan     23 minutes ago   Up 23 minutes
+shozz-cliente-wan     alpine:3.22                     "sh -c 'ip route rep…"   cliente-wan     23 minutes ago   Up 23 minutes
+shozz-ubuntu-router   shozz-infra-lab-ubuntu-router   "/usr/local/sbin/sho…"   ubuntu-router   8 minutes ago    Up 4 minutes    2222/tcp
+[exit=0, esperado=0]

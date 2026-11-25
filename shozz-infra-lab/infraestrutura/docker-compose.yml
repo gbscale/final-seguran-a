@@ -5,8 +5,12 @@ services:
     build:
       context: ..
       dockerfile: infraestrutura/Dockerfile
+      additional_contexts:
+        firewall_src: ../../firewall
     container_name: shozz-ubuntu-router
     hostname: ubuntu-router
+    environment:
+      SHOZZ_FIREWALL: ${SHOZZ_FIREWALL:-on}
     cap_add:
       - NET_ADMIN
     sysctls:

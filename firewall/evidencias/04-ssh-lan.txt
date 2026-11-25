@@ -1,0 +1,63 @@
+Data e hora (America/Sao_Paulo): 2026-11-24 20:06:13 -03:00
+
+## Diretório privado temporário no cliente LAN
+$ docker compose exec -T cliente-lan sh -c 'umask 077; mktemp -d /tmp/shozz-ssh-check.XXXXXXXX'
+/tmp/shozz-ssh-check.XXfALCEm
+[exit=0, esperado=0]
+
+## Diretório protegido para backup da autorização do roteador
+$ docker compose exec -T ubuntu-router sh -c 'umask 077; mktemp -d /tmp/shozz-ssh-check.XXXXXXXX'
+/tmp/shozz-ssh-check.Bc1EM5bO
+[exit=0, esperado=0]
+
+## Hash do arquivo de autorização original
+$ docker compose exec -T ubuntu-router sha256sum /home/ubuntu/.ssh/authorized_keys
+756ba35199351f7b6309e7a66565f99f6b07a8af4990f38a88981f71893bdd96  /home/ubuntu/.ssh/authorized_keys
+[exit=0, esperado=0]
+
+## Geração da chave descartável no cliente LAN, sem exibir chaves
+$ docker compose exec -T cliente-lan sh -c 'umask 077; ssh-keygen -q -t ed25519 -N '''' -C shozz-ssh-check -f /tmp/shozz-ssh-check.XXfALCEm/key'
+
+[exit=0, esperado=0]
+
+## Fixação da chave pública do host no cliente LAN
+$ <valor público temporário omitido> | docker compose exec -T cliente-lan sh -c 'umask 077; tr -d ''\015'' > /tmp/shozz-ssh-check.XXfALCEm/known_hosts'
+
+[exit=0, esperado=0]
+
+## Backup do authorized_keys original antes do teste
+$ docker compose exec -T ubuntu-router sh -c 'umask 077; cp /home/ubuntu/.ssh/authorized_keys /tmp/shozz-ssh-check.Bc1EM5bO/original'
+
+[exit=0, esperado=0]
+
+## Adição temporária de chave limitada a id -un e à origem LAN
+$ <valor público temporário omitido> | docker compose exec -T ubuntu-router sh -c 'set -e; printf ''\n'' >> /home/ubuntu/.ssh/authorized_keys; tr -d ''\015'' >> /home/ubuntu/.ssh/authorized_keys'
+
+[exit=0, esperado=0]
+
+## Login SSH por chave e identidade de host verificada pela LAN
+$ docker compose exec -T cliente-lan ssh -o BatchMode=yes -o ConnectTimeout=4 -o IdentitiesOnly=yes -o HostKeyAlgorithms=ssh-ed25519 -o StrictHostKeyChecking=yes -o UserKnownHostsFile=/tmp/shozz-ssh-check.XXfALCEm/known_hosts -i /tmp/shozz-ssh-check.XXfALCEm/key -p 2222 ubuntu@10.10.10.1 id -un
+ubuntu
+[exit=0, esperado=0]
+[validado: (?m)^ubuntu\s*$]
+
+## Restauração e conferência do authorized_keys original
+$ docker compose exec -T ubuntu-router sh -c 'set -e; cat /tmp/shozz-ssh-check.Bc1EM5bO/original > /home/ubuntu/.ssh/authorized_keys; cmp -s /tmp/shozz-ssh-check.Bc1EM5bO/original /home/ubuntu/.ssh/authorized_keys'
+
+[exit=0, esperado=0]
+
+## Hash do arquivo restaurado
+$ docker compose exec -T ubuntu-router sha256sum /home/ubuntu/.ssh/authorized_keys
+756ba35199351f7b6309e7a66565f99f6b07a8af4990f38a88981f71893bdd96  /home/ubuntu/.ssh/authorized_keys
+[exit=0, esperado=0]
+[validado: authorized_keys restaurado byte a byte]
+
+## Limpeza do backup temporário após a restauração
+$ docker compose exec -T ubuntu-router sh -c 'set -e; rm -f /tmp/shozz-ssh-check.Bc1EM5bO/original; rmdir /tmp/shozz-ssh-check.Bc1EM5bO'
+
+[exit=0, esperado=0]
+
+## Limpeza da chave de teste e do known_hosts temporário
+$ docker compose exec -T cliente-lan sh -c 'set -e; rm -f /tmp/shozz-ssh-check.XXfALCEm/key /tmp/shozz-ssh-check.XXfALCEm/key.pub /tmp/shozz-ssh-check.XXfALCEm/known_hosts; rmdir /tmp/shozz-ssh-check.XXfALCEm'
+
+[exit=0, esperado=0]
